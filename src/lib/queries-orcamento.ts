@@ -155,6 +155,7 @@ export async function getInstrumentoBaseAberto(exercicioAno: number | null) {
 export async function listarEmendas(filtros: {
   exercicioAno?: number | null;
   autorUsuarioId?: string;
+  status?: string;
 }) {
   const rows = await safe(
     () =>
@@ -162,6 +163,7 @@ export async function listarEmendas(filtros: {
         where: {
           exercicio: filtros.exercicioAno ? { ano: filtros.exercicioAno } : undefined,
           autor: filtros.autorUsuarioId ? { usuarioId: filtros.autorUsuarioId } : undefined,
+          status: filtros.status as never,
         },
         include: {
           autor: { select: { nome: true } },
