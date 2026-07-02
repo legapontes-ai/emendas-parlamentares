@@ -191,6 +191,35 @@ export async function listarEmendas(filtros: {
   }));
 }
 
+// Emenda completa (classificação por extenso + última validação) para PDF/detalhe.
+export async function getEmendaCompleta(id: string) {
+  return safe(
+    () =>
+      prisma.emenda.findUnique({
+        where: { id },
+        include: {
+          autor: { select: { nome: true, cargo: true } },
+          exercicio: { select: { ano: true } },
+          instrumentoBase: { select: { numero: true, tipo: true } },
+          dotacao: {
+            include: {
+              orgao: true,
+              unidadeOrcamentaria: true,
+              funcao: true,
+              subfuncao: true,
+              programa: true,
+              acao: true,
+              naturezaDespesa: true,
+              fonteRecurso: true,
+            },
+          },
+          validacoes: { orderBy: { executadaEm: "desc" }, take: 1 },
+        },
+      }),
+    null
+  );
+}
+
 export async function getEmendaDetalhe(id: string) {
   return safe(
     () =>

@@ -1,3 +1,4 @@
+import Link from "next/link";
 import {
   Table,
   TableBody,
@@ -63,7 +64,11 @@ export function EmendasTable({
         <TableBody>
           {emendas.map((e) => (
             <TableRow key={e.id}>
-              <TableCell className="font-medium">{e.numero}</TableCell>
+              <TableCell className="font-medium">
+                <Link href={`/legislativo/emendas/${e.id}`} className="hover:underline">
+                  {e.numero}
+                </Link>
+              </TableCell>
               {mostrarAutor ? <TableCell>{e.autor}</TableCell> : null}
               <TableCell className="max-w-56 truncate" title={e.programa}>{e.programa}</TableCell>
               <TableCell className="max-w-56 truncate" title={e.acao}>{e.acao}</TableCell>

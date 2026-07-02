@@ -78,6 +78,20 @@ export async function listarProjetosDeLei() {
   );
 }
 
+// ------------------------------------------------------------------ Auditoria
+export async function listarAuditoria(filtros: { entidade?: string } = {}) {
+  return safe(
+    () =>
+      prisma.auditLog.findMany({
+        where: { entidade: filtros.entidade || undefined },
+        include: { usuario: { select: { name: true, email: true } } },
+        orderBy: { criadoEm: "desc" },
+        take: 200,
+      }),
+    []
+  );
+}
+
 // ------------------------------------------------------------------- Usuários
 export async function listarUsuarios() {
   return safe(

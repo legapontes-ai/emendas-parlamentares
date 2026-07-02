@@ -89,6 +89,36 @@ export async function listarComparacoes(ano: number | null) {
   );
 }
 
+// Relatório consolidado: emendas por programa (contagem, total, acatadas).
+export async function emendasPorPrograma(ano: number | null) {
+  if (!ano) return [];
+  const rows = await safe(
+    () =>
+      prisma.emenda.findMany({
+        where: { exercicio: { ano } },
+        select: {
+          valor: true,
+          status: true,
+          dotacao: { select: { programa: { select: { codigo: true, nome: true } } } },
+        },
+      }),
+    []
+  );
+  const mapa = new Map<
+    string,
+    { programa: string; quantidade: number; total: number; acatadas: number }
+  >();
+  for (const e of rows) {
+    const chave = `${e.dotacao.programa.codigo} — ${e.dotacao.programa.nome}`;
+    const atual = mapa.get(chave) ?? { programa: chave, quantidade: 0, total: 0, acatadas: 0 };
+    atual.quantidade += 1;
+    atual.total += Number(e.valor);
+    if (e.status === "APROVADA") atual.acatadas += Number(e.valor);
+    mapa.set(chave, atual);
+  }
+  return [...mapa.values()].sort((a, b) => b.total - a.total);
+}
+
 async function somaInstrumento(instrumentoId: string) {
   const r = await safe(
     () =>

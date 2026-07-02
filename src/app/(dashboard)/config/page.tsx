@@ -7,6 +7,7 @@ import {
 } from "@/components/ui/tabs";
 import { listarExercicios } from "@/lib/exercicio";
 import {
+  listarAuditoria,
   listarInstrumentos,
   listarNormas,
   listarNormasAtivas,
@@ -18,6 +19,7 @@ import { ParametrosTab } from "@/components/config/parametros-tab";
 import { NormasTab } from "@/components/config/normas-tab";
 import { InstrumentosTab } from "@/components/config/instrumentos-tab";
 import { UsuariosTab } from "@/components/config/usuarios-tab";
+import { AuditoriaTab } from "@/components/config/auditoria-tab";
 
 export default async function ConfigPage() {
   const [
@@ -28,6 +30,7 @@ export default async function ConfigPage() {
     projetosDeLei,
     usuarios,
     exercicios,
+    auditoria,
   ] = await Promise.all([
     listarParametros(),
     listarNormas(),
@@ -36,9 +39,18 @@ export default async function ConfigPage() {
     listarProjetosDeLei(),
     listarUsuarios(),
     listarExercicios(),
+    listarAuditoria(),
   ]);
 
   const exOpc = exercicios.map((e) => ({ id: e.id, ano: e.ano }));
+  const logs = auditoria.map((l) => ({
+    id: l.id,
+    criadoEm: new Date(l.criadoEm).toLocaleString("pt-BR"),
+    usuario: l.usuario?.name ?? l.usuario?.email ?? "—",
+    entidade: l.entidade,
+    entidadeId: l.entidadeId,
+    acao: l.acao,
+  }));
 
   return (
     <div className="mx-auto max-w-6xl">
@@ -54,6 +66,7 @@ export default async function ConfigPage() {
           <TabsTrigger value="normas">Normas</TabsTrigger>
           <TabsTrigger value="instrumentos">Instrumentos</TabsTrigger>
           <TabsTrigger value="usuarios">Usuários</TabsTrigger>
+          <TabsTrigger value="auditoria">Auditoria</TabsTrigger>
         </TabsList>
 
         <TabsContent value="parametros" className="mt-4">
@@ -75,6 +88,9 @@ export default async function ConfigPage() {
         </TabsContent>
         <TabsContent value="usuarios" className="mt-4">
           <UsuariosTab usuarios={usuarios} />
+        </TabsContent>
+        <TabsContent value="auditoria" className="mt-4">
+          <AuditoriaTab logs={logs} />
         </TabsContent>
       </Tabs>
     </div>
