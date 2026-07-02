@@ -8,10 +8,15 @@ const globalForPrisma = globalThis as unknown as {
 };
 
 function createPrismaClient(): PrismaClient {
-  // Runtime pooled: DATABASE_URL, ou a variável injetada pela integração Neon da
-  // Vercel (marcada como sensível, não legível por CLI).
+  // Usa a MESMA conexão da migração (não-pooled/direct do Neon) para garantir
+  // que runtime e migrations acessem o mesmo banco/estado. O pooler (PgBouncer)
+  // do Neon com o adapter-pg causava "tabela não existe"/confusão de sessão.
+  // Migrar para @prisma/adapter-neon (pooled correto) fica como melhoria.
   const connectionString =
-    process.env.DATABASE_URL ?? process.env.Emendas_DATABASE_URL;
+    process.env.DATABASE_URL ??
+    process.env.Emendas_DATABASE_URL_UNPOOLED ??
+    process.env.Emendas_POSTGRES_URL_NON_POOLING ??
+    process.env.Emendas_DATABASE_URL;
   if (!connectionString) {
     // Não derruba a importação do módulo: a falha só ocorre se/quando uma query
     // for executada (enquanto o Neon não está configurado — ver PROMPT 2).

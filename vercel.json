@@ -1,4 +1,4 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "buildCommand": "prisma generate && if [ -n \"$DIRECT_URL\" ] || [ -n \"$Emendas_POSTGRES_URL_NON_POOLING\" ]; then prisma migrate deploy; fi && next build"
+  "buildCommand": "prisma generate && if [ -n \"$Emendas_POSTGRES_URL_NON_POOLING\" ] || [ -n \"$DIRECT_URL\" ]; then prisma migrate deploy && npx tsx prisma/seed.ts; fi && next build"
 }
