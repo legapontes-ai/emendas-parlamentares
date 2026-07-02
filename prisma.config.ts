@@ -10,6 +10,12 @@ export default defineConfig({
     path: "prisma/migrations",
   },
   datasource: {
-    url: process.env["DIRECT_URL"] ?? process.env["DATABASE_URL"],
+    // Migrations: conexão DIRETA (não-pooled). Aceita DIRECT_URL ou as variáveis
+    // da integração Neon da Vercel (Emendas_*) como fallback.
+    url:
+      process.env["DIRECT_URL"] ??
+      process.env["Emendas_POSTGRES_URL_NON_POOLING"] ??
+      process.env["DATABASE_URL"] ??
+      process.env["Emendas_DATABASE_URL"],
   },
 });

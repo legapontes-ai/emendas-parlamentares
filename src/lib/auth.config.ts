@@ -6,6 +6,7 @@ import type { Poder, Role } from "@/generated/prisma/enums";
 export const authConfig = {
   pages: { signIn: "/login" },
   session: { strategy: "jwt" },
+  trustHost: true,
   providers: [],
   callbacks: {
     authorized({ auth, request }) {

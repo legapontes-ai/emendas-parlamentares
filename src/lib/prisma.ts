@@ -8,7 +8,10 @@ const globalForPrisma = globalThis as unknown as {
 };
 
 function createPrismaClient(): PrismaClient {
-  const connectionString = process.env.DATABASE_URL;
+  // Runtime pooled: DATABASE_URL, ou a variável injetada pela integração Neon da
+  // Vercel (marcada como sensível, não legível por CLI).
+  const connectionString =
+    process.env.DATABASE_URL ?? process.env.Emendas_DATABASE_URL;
   if (!connectionString) {
     // Não derruba a importação do módulo: a falha só ocorre se/quando uma query
     // for executada (enquanto o Neon não está configurado — ver PROMPT 2).
