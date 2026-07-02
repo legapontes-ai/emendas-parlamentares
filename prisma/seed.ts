@@ -4,11 +4,13 @@ import { PrismaClient } from "../src/generated/prisma/client";
 import { semear } from "../src/lib/seed-data";
 
 // Runner do seed (CLI): usa conexão direta quando disponível.
+// Preferir as variáveis Emendas_* (banco com as tabelas). Ver nota em prisma.ts.
 const url =
-  process.env.DIRECT_URL ||
-  process.env.DATABASE_URL ||
   process.env.Emendas_POSTGRES_URL_NON_POOLING ||
-  process.env.Emendas_DATABASE_URL;
+  process.env.Emendas_DATABASE_URL_UNPOOLED ||
+  process.env.Emendas_DATABASE_URL ||
+  process.env.DIRECT_URL ||
+  process.env.DATABASE_URL;
 
 if (!url) {
   console.error("Defina DATABASE_URL/DIRECT_URL no .env antes de rodar o seed.");
