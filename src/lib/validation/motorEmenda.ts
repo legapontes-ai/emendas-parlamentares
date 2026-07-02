@@ -1,0 +1,157 @@
+import { prisma } from "@/lib/prisma";
+import { Prisma } from "@/generated/prisma/client";
+import {
+  avaliarEmenda,
+  type ContextoEmenda,
+  type DotacaoCtx,
+  type ResultadoMotor,
+} from "./motor";
+
+export { avaliarEmenda } from "./motor";
+export type { ResultadoMotor, ItemValidacao } from "./motor";
+
+type DotacaoDb = {
+  id: string;
+  instrumentoId: string;
+  exercicioId: string;
+  orgaoId: string;
+  unidadeOrcamentariaId: string;
+  funcaoId: string;
+  subfuncaoId: string;
+  programaId: string;
+  acaoId: string;
+  naturezaDespesaId: string;
+  fonteRecursoId: string;
+  valorAtual: Prisma.Decimal;
+  acao: { programaId: string } | null;
+};
+
+function toCtx(d: DotacaoDb | null): DotacaoCtx | null {
+  if (!d) return null;
+  return {
+    id: d.id,
+    instrumentoId: d.instrumentoId,
+    exercicioId: d.exercicioId,
+    orgaoId: d.orgaoId,
+    unidadeOrcamentariaId: d.unidadeOrcamentariaId,
+    funcaoId: d.funcaoId,
+    subfuncaoId: d.subfuncaoId,
+    programaId: d.programaId,
+    acaoId: d.acaoId,
+    naturezaDespesaId: d.naturezaDespesaId,
+    fonteRecursoId: d.fonteRecursoId,
+    valorAtual: Number(d.valorAtual),
+    acaoProgramaId: d.acao?.programaId ?? d.programaId,
+  };
+}
+
+// Carrega o contexto da emenda, roda o motor, persiste ValidacaoEmenda e
+// atualiza Emenda.status. Retorna o relatório item a item.
+export async function validarEmenda(emendaId: string): Promise<ResultadoMotor> {
+  const emenda = await prisma.emenda.findUnique({
+    where: { id: emendaId },
+    include: {
+      exercicio: { select: { status: true } },
+      instrumentoBase: { select: { status: true } },
+      dotacao: { include: { acao: { select: { programaId: true } } } },
+      dotacaoOrigem: { include: { acao: { select: { programaId: true } } } },
+      dotacaoDestino: { include: { acao: { select: { programaId: true } } } },
+    },
+  });
+  if (!emenda) throw new Error("Emenda não encontrada.");
+
+  // PPA do exercício e seus programas.
+  const ppa = await prisma.instrumentoPlanejamento.findFirst({
+    where: { exercicioId: emenda.exercicioId, tipo: "PPA" },
+    select: { id: true },
+  });
+  const programasNoPPA = new Set<string>();
+  if (ppa) {
+    const dots = await prisma.dotacao.findMany({
+      where: { instrumentoId: ppa.id },
+      select: { programaId: true },
+    });
+    for (const x of dots) programasNoPPA.add(x.programaId);
+  }
+
+  // Prioridades da LDO.
+  const prioridades = await prisma.prioridadeLDO.findMany({
+    where: { exercicioId: emenda.exercicioId },
+    select: { programaId: true, acaoId: true },
+  });
+  const prioridadesPrograma = new Set(prioridades.map((p) => p.programaId));
+  const prioridadesAcao = new Set(
+    prioridades.filter((p) => p.acaoId).map((p) => p.acaoId as string)
+  );
+
+  // Parâmetros (o do exercício sobrepõe o GERAL).
+  const params = await prisma.parametroValidacao.findMany({
+    where: {
+      chave: { in: ["TETO_VALOR_AUTOR", "ADERENCIA_LDO"] },
+      OR: [{ exercicioId: emenda.exercicioId }, { escopo: "GERAL", exercicioId: null }],
+    },
+  });
+  const pick = (chave: string) =>
+    params.find((p) => p.chave === chave && p.exercicioId === emenda.exercicioId) ??
+    params.find((p) => p.chave === chave && p.escopo === "GERAL");
+
+  const teto = pick("TETO_VALOR_AUTOR");
+  const tetoNum = teto ? Number(teto.valor) : NaN;
+  const tetoValorAutor = Number.isFinite(tetoNum) ? tetoNum : null;
+
+  const ldo = pick("ADERENCIA_LDO");
+  const modoAderenciaLDO =
+    ldo?.modo === "BLOQUEANTE" ? "BLOQUEANTE" : ldo?.modo === "ALERTA" ? "ALERTA" : null;
+
+  // Soma das emendas VÁLIDAS/SUBMETIDAS do autor no exercício (exceto esta).
+  const soma = await prisma.emenda.aggregate({
+    _sum: { valor: true },
+    where: {
+      autorId: emenda.autorId,
+      exercicioId: emenda.exercicioId,
+      status: { in: ["VALIDA", "SUBMETIDA"] },
+      id: { not: emendaId },
+    },
+  });
+  const somaAutorExistente = soma._sum.valor ? Number(soma._sum.valor) : 0;
+
+  const ctx: ContextoEmenda = {
+    emenda: {
+      tipo: emenda.tipo,
+      valor: Number(emenda.valor),
+      exercicioId: emenda.exercicioId,
+      instrumentoBaseId: emenda.instrumentoBaseId,
+      autorId: emenda.autorId,
+    },
+    exercicioStatus: emenda.exercicio.status,
+    instrumentoBaseStatus: emenda.instrumentoBase.status,
+    dotacao: toCtx(emenda.dotacao as DotacaoDb | null),
+    dotacaoOrigem: toCtx(emenda.dotacaoOrigem as DotacaoDb | null),
+    dotacaoDestino: toCtx(emenda.dotacaoDestino as DotacaoDb | null),
+    ppaCadastrado: !!ppa,
+    programasNoPPA,
+    prioridadesPrograma,
+    prioridadesAcao,
+    modoAderenciaLDO,
+    tetoValorAutor,
+    somaAutorExistente,
+  };
+
+  const resultado = avaliarEmenda(ctx);
+
+  await prisma.$transaction([
+    prisma.validacaoEmenda.create({
+      data: {
+        emendaId,
+        resultado: resultado.resultado,
+        itens: resultado.itens as unknown as Prisma.InputJsonValue,
+      },
+    }),
+    prisma.emenda.update({
+      where: { id: emendaId },
+      data: { status: resultado.resultado },
+    }),
+  ]);
+
+  return resultado;
+}

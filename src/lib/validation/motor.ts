@@ -1,0 +1,249 @@
+// Motor de validação de compatibilidade de emendas — NÚCLEO PURO.
+// Sem I/O: recebe todo o contexto já carregado e decide. Testável isoladamente.
+// A camada com banco (validarEmenda) vive em motorEmenda.ts.
+
+export type StatusItem = "OK" | "FALHA" | "ALERTA";
+
+export type ItemValidacao = {
+  codigo: string;
+  descricao: string;
+  status: StatusItem;
+  detalhe: string;
+};
+
+export type ResultadoMotor = {
+  resultado: "VALIDA" | "INVALIDA";
+  itens: ItemValidacao[];
+};
+
+// Dados mínimos de uma dotação para as checagens.
+export type DotacaoCtx = {
+  id: string;
+  instrumentoId: string;
+  exercicioId: string;
+  orgaoId: string;
+  unidadeOrcamentariaId: string;
+  funcaoId: string;
+  subfuncaoId: string;
+  programaId: string;
+  acaoId: string;
+  naturezaDespesaId: string;
+  fonteRecursoId: string;
+  valorAtual: number;
+  acaoProgramaId: string; // programaId ao qual a ação pertence
+};
+
+export type ContextoEmenda = {
+  emenda: {
+    tipo: string;
+    valor: number;
+    exercicioId: string;
+    instrumentoBaseId: string;
+    autorId: string;
+  };
+  exercicioStatus: string;
+  instrumentoBaseStatus: string;
+  dotacao: DotacaoCtx | null;
+  dotacaoOrigem: DotacaoCtx | null;
+  dotacaoDestino: DotacaoCtx | null;
+  ppaCadastrado: boolean;
+  programasNoPPA: Set<string>;
+  prioridadesPrograma: Set<string>;
+  prioridadesAcao: Set<string>;
+  modoAderenciaLDO: "BLOQUEANTE" | "ALERTA" | null;
+  tetoValorAutor: number | null;
+  somaAutorExistente: number;
+};
+
+const STATUS_BASE_ABERTO = new Set(["EM_TRAMITACAO"]);
+
+const brl = (n: number) =>
+  n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+
+// Avalia uma emenda e retorna o relatório item a item.
+// Regra: VÁLIDA se nenhum item estiver em FALHA; ALERTAS não impedem.
+export function avaliarEmenda(ctx: ContextoEmenda): ResultadoMotor {
+  const itens: ItemValidacao[] = [];
+  const add = (
+    codigo: string,
+    descricao: string,
+    status: StatusItem,
+    detalhe: string
+  ) => itens.push({ codigo, descricao, status, detalhe });
+
+  const d = ctx.dotacao;
+
+  // 1) EXERCICIO_ABERTO
+  {
+    const ok = ctx.exercicioStatus === "ABERTO";
+    add(
+      "EXERCICIO_ABERTO",
+      "Exercício está aberto",
+      ok ? "OK" : "FALHA",
+      ok ? "Exercício aberto." : `Exercício ${ctx.exercicioStatus}.`
+    );
+  }
+
+  // 2) INSTRUMENTO_BASE_ABERTO
+  {
+    const ok = STATUS_BASE_ABERTO.has(ctx.instrumentoBaseStatus);
+    add(
+      "INSTRUMENTO_BASE_ABERTO",
+      "Instrumento base permite emendas",
+      ok ? "OK" : "FALHA",
+      ok
+        ? "Projeto de lei aberto para emendas."
+        : `Status ${ctx.instrumentoBaseStatus} não permite emendas.`
+    );
+  }
+
+  // 3) DOTACAO_EXISTE (existe e pertence ao mesmo instrumento base e exercício)
+  {
+    if (!d) {
+      add("DOTACAO_EXISTE", "Dotação existe e pertence à base", "FALHA", "Dotação não encontrada.");
+    } else {
+      const pertence =
+        d.instrumentoId === ctx.emenda.instrumentoBaseId &&
+        d.exercicioId === ctx.emenda.exercicioId;
+      add(
+        "DOTACAO_EXISTE",
+        "Dotação existe e pertence à base",
+        pertence ? "OK" : "FALHA",
+        pertence
+          ? "Dotação pertence ao instrumento base e exercício."
+          : "Dotação pertence a outro instrumento/exercício."
+      );
+    }
+  }
+
+  // 4) PROGRAMA_NO_PPA
+  {
+    if (!d) {
+      add("PROGRAMA_NO_PPA", "Programa consta no PPA", "FALHA", "Sem dotação.");
+    } else if (!ctx.ppaCadastrado) {
+      add("PROGRAMA_NO_PPA", "Programa consta no PPA", "ALERTA", "PPA do exercício não cadastrado.");
+    } else {
+      const ok = ctx.programasNoPPA.has(d.programaId);
+      add(
+        "PROGRAMA_NO_PPA",
+        "Programa consta no PPA",
+        ok ? "OK" : "FALHA",
+        ok ? "Programa presente no PPA." : "Programa não consta no PPA do exercício."
+      );
+    }
+  }
+
+  // 5) ACAO_VINCULADA (ação pertence ao programa da dotação)
+  {
+    if (!d) {
+      add("ACAO_VINCULADA", "Ação pertence ao programa", "FALHA", "Sem dotação.");
+    } else {
+      const ok = d.acaoProgramaId === d.programaId;
+      add(
+        "ACAO_VINCULADA",
+        "Ação pertence ao programa",
+        ok ? "OK" : "FALHA",
+        ok ? "Ação vinculada ao programa da dotação." : "Ação de programa diferente da dotação."
+      );
+    }
+  }
+
+  // 6) CLASSIFICACAO_COMPLETA (todos os componentes por FK)
+  {
+    if (!d) {
+      add("CLASSIFICACAO_COMPLETA", "Classificação completa", "FALHA", "Sem dotação.");
+    } else {
+      const faltando = (
+        [
+          ["órgão", d.orgaoId],
+          ["unidade", d.unidadeOrcamentariaId],
+          ["função", d.funcaoId],
+          ["subfunção", d.subfuncaoId],
+          ["programa", d.programaId],
+          ["ação", d.acaoId],
+          ["natureza", d.naturezaDespesaId],
+          ["fonte", d.fonteRecursoId],
+        ] as const
+      )
+        .filter(([, v]) => !v)
+        .map(([nome]) => nome);
+      const ok = faltando.length === 0;
+      add(
+        "CLASSIFICACAO_COMPLETA",
+        "Classificação completa",
+        ok ? "OK" : "FALHA",
+        ok ? "Todos os componentes presentes." : `Faltando: ${faltando.join(", ")}.`
+      );
+    }
+  }
+
+  // 7) ADERENCIA_LDO (modo configurável)
+  {
+    if (!d) {
+      add("ADERENCIA_LDO", "Aderência à LDO", "ALERTA", "Sem dotação.");
+    } else {
+      const consta =
+        ctx.prioridadesPrograma.has(d.programaId) ||
+        ctx.prioridadesAcao.has(d.acaoId);
+      if (consta) {
+        add("ADERENCIA_LDO", "Aderência à LDO", "OK", "Programa/ação consta nas prioridades da LDO.");
+      } else {
+        const modo = ctx.modoAderenciaLDO ?? "ALERTA";
+        add(
+          "ADERENCIA_LDO",
+          "Aderência à LDO",
+          modo === "BLOQUEANTE" ? "FALHA" : "ALERTA",
+          "Programa/ação não consta nas prioridades da LDO."
+        );
+      }
+    }
+  }
+
+  // 8) LIMITE_VALOR_AUTOR
+  {
+    if (ctx.tetoValorAutor == null) {
+      add("LIMITE_VALOR_AUTOR", "Teto de valor por autor", "OK", "Sem teto configurado.");
+    } else {
+      const soma = ctx.somaAutorExistente + ctx.emenda.valor;
+      const ok = soma <= ctx.tetoValorAutor;
+      add(
+        "LIMITE_VALOR_AUTOR",
+        "Teto de valor por autor",
+        ok ? "OK" : "FALHA",
+        `Acumulado ${brl(soma)} — teto ${brl(ctx.tetoValorAutor)}.`
+      );
+    }
+  }
+
+  // 9) TIPO_COERENTE
+  {
+    if (ctx.emenda.tipo === "REMANEJAMENTO") {
+      const o = ctx.dotacaoOrigem;
+      const dest = ctx.dotacaoDestino;
+      const ok = !!o && !!dest && o.id !== dest.id;
+      add(
+        "TIPO_COERENTE",
+        "Coerência do tipo (remanejamento)",
+        ok ? "OK" : "FALHA",
+        ok
+          ? "Origem e destino válidos e distintos."
+          : "Remanejamento exige origem e destino válidos e distintos."
+      );
+    } else if (ctx.emenda.tipo === "ANULACAO") {
+      const ok = !!d && ctx.emenda.valor <= d.valorAtual;
+      add(
+        "TIPO_COERENTE",
+        "Coerência do tipo (anulação)",
+        ok ? "OK" : "FALHA",
+        ok
+          ? "Valor dentro do saldo da dotação."
+          : "Anulação não pode exceder o valor atual da dotação."
+      );
+    } else {
+      add("TIPO_COERENTE", "Coerência do tipo", "OK", "Tipo sem exigências adicionais.");
+    }
+  }
+
+  const resultado = itens.some((i) => i.status === "FALHA") ? "INVALIDA" : "VALIDA";
+  return { resultado, itens };
+}
