@@ -7,12 +7,17 @@ const globalForPrisma = globalThis as unknown as {
   prisma: PrismaClient | undefined;
 };
 
-function createPrismaClient() {
+function createPrismaClient(): PrismaClient {
   const connectionString = process.env.DATABASE_URL;
   if (!connectionString) {
-    throw new Error("DATABASE_URL não definida. Configure o .env com a string pooled do Neon.");
+    // Não derruba a importação do módulo: a falha só ocorre se/quando uma query
+    // for executada (enquanto o Neon não está configurado — ver PROMPT 2).
+    // Leituras de UI degradam para estado vazio via try/catch nos callers.
+    console.warn(
+      "[prisma] DATABASE_URL não definida — as queries falharão até preencher o .env."
+    );
   }
-  const adapter = new PrismaPg({ connectionString });
+  const adapter = new PrismaPg({ connectionString: connectionString ?? "" });
   return new PrismaClient({ adapter });
 }
 
