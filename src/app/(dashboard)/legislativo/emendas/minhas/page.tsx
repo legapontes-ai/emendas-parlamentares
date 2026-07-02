@@ -1,14 +1,26 @@
 import { PageHeader } from "@/components/page-header";
-import { EmProducao } from "@/components/em-producao";
+import { EmendasTable } from "@/components/emendas/emendas-table";
+import { getCurrentUser } from "@/lib/session";
+import { getAnoAtivo } from "@/lib/exercicio";
+import { listarEmendas } from "@/lib/queries-orcamento";
 
-export default function Page() {
+export default async function MinhasEmendasPage() {
+  const user = await getCurrentUser();
+  const ano = await getAnoAtivo();
+  const emendas = await listarEmendas({ exercicioAno: ano, autorUsuarioId: user.id });
+
   return (
     <div>
       <PageHeader
         titulo="Minhas emendas"
-        crumbs={[{ titulo: "Hub", href: "/hub" }, { titulo: "Emendas", href: "/legislativo/emendas" }, { titulo: "Minhas emendas" }]}
+        descricao={`Emendas de sua autoria${ano ? ` no exercício ${ano}` : ""}.`}
+        crumbs={[
+          { titulo: "Hub", href: "/hub" },
+          { titulo: "Emendas", href: "/legislativo/emendas" },
+          { titulo: "Minhas emendas" },
+        ]}
       />
-      <EmProducao titulo="Minhas emendas" prompt="PROMPT 7" />
+      <EmendasTable emendas={emendas} mostrarAutor={false} />
     </div>
   );
 }
