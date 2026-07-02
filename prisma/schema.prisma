@@ -1,7 +1,15 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Get a free hosted Postgres database in seconds: `npx create-db`
+// Sistema de Gestão de Emendas Parlamentares — modelo de domínio.
+// Orçamento público municipal brasileiro (PPA/LDO/LOA), separado por Poder.
+//
+// Princípios estruturais (PROMPT 1):
+//  - Toda classificação orçamentária é por FK — NUNCA string solta para
+//    programa, ação, órgão, unidade, natureza ou fonte.
+//  - IDs cuid, createdAt/updatedAt e índices adequados.
+//  - Auth.js (User/Account/Session/VerificationToken) em inglês por exigência do
+//    adapter; domínio em português. FKs para o usuário usam `usuarioId`.
+//
+// Prisma 7 usa driver adapters: a URL de conexão vem do prisma.config.ts (CLI /
+// migrations, via DIRECT_URL) e de src/lib/prisma.ts (runtime, via DATABASE_URL).
 
 generator client {
   provider = "prisma-client"
@@ -10,4 +18,585 @@ generator client {
 
 datasource db {
   provider = "postgresql"
+}
+
+// ============================================================================
+// ENUMS
+// ============================================================================
+
+// Poder da separação institucional.
+enum Poder {
+  LEGISLATIVO
+  EXECUTIVO
+}
+
+// Papéis de acesso (controle por Poder + transversal SUPER_ADMIN).
+enum Role {
+  SUPER_ADMIN
+  EXEC_ADMIN
+  EXEC_PLANEJAMENTO
+  EXEC_CONSULTA
+  LEG_ADMIN
+  LEG_TECNICO
+  LEG_AUTOR
+  LEG_CONSULTA
+}
+
+// Situação do exercício orçamentário (motor exige exercício ABERTO).
+enum StatusExercicio {
+  ABERTO
+  ENCERRADO
+}
+
+// Instrumentos de planejamento fiscal.
+enum TipoInstrumento {
+  PPA
+  LDO
+  LOA
+}
+
+// Espécie do instrumento: projeto de lei (base das emendas) ou lei aprovada.
+enum EspecieInstrumento {
+  PROJETO_LEI
+  LEI_APROVADA
+}
+
+// Ciclo de vida do instrumento (PROJETO_LEI → ... → VIGENTE).
+enum StatusInstrumento {
+  EM_ELABORACAO
+  ENVIADO
+  EM_TRAMITACAO
+  APROVADO
+  SANCIONADO
+  VIGENTE
+  ENCERRADO
+}
+
+// Tipo de ação orçamentária (classificação funcional-programática).
+enum TipoAcao {
+  PROJETO
+  ATIVIDADE
+  OPERACAO_ESPECIAL
+}
+
+// Documentos normativos de referência.
+enum TipoNorma {
+  LOM
+  REGIMENTO_INTERNO
+  OUTRO
+}
+
+// Escopo de um parâmetro de validação.
+enum EscopoParametro {
+  GERAL
+  EXERCICIO
+}
+
+// Modo de aplicação de um parâmetro: impede (BLOQUEANTE) ou apenas avisa.
+enum ModoValidacao {
+  BLOQUEANTE
+  ALERTA
+}
+
+// Tipo de emenda parlamentar.
+enum TipoEmenda {
+  ACRESCIMO
+  ANULACAO
+  REMANEJAMENTO
+  IMPOSITIVA
+}
+
+// Ciclo de vida da emenda.
+enum StatusEmenda {
+  RASCUNHO
+  EM_VALIDACAO
+  VALIDA
+  INVALIDA
+  SUBMETIDA
+  EM_TRAMITACAO
+  APROVADA
+  REJEITADA
+}
+
+// Resultado consolidado de uma execução de validação.
+enum ResultadoValidacao {
+  VALIDA
+  INVALIDA
+}
+
+// ============================================================================
+// PLANEJAMENTO — contexto anual e classificação orçamentária (tudo por FK)
+// ============================================================================
+
+// Exercício orçamentário (ano). Contexto de dados de toda a aplicação.
+model Exercicio {
+  id        String          @id @default(cuid())
+  ano       Int             @unique
+  status    StatusExercicio @default(ABERTO)
+  createdAt DateTime        @default(now())
+  updatedAt DateTime        @updatedAt
+
+  // Classificação e demais entidades vinculadas ao exercício.
+  orgaos       Orgao[]
+  unidades     UnidadeOrcamentaria[]
+  funcoes      Funcao[]
+  subfuncoes   Subfuncao[]
+  programas    Programa[]
+  acoes        Acao[]
+  naturezas    NaturezaDespesa[]
+  fontes       FonteRecurso[]
+  prioridades  PrioridadeLDO[]
+  instrumentos InstrumentoPlanejamento[]
+  dotacoes     Dotacao[]
+  emendas      Emenda[]
+  parametros   ParametroValidacao[]
+}
+
+// Órgão orçamentário.
+model Orgao {
+  id          String   @id @default(cuid())
+  codigo      String
+  nome        String
+  exercicioId String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  exercicio Exercicio             @relation(fields: [exercicioId], references: [id], onDelete: Cascade)
+  unidades  UnidadeOrcamentaria[]
+  dotacoes  Dotacao[]
+
+  @@unique([exercicioId, codigo])
+  @@index([exercicioId])
+}
+
+// Unidade Orçamentária (pertence a um Órgão).
+model UnidadeOrcamentaria {
+  id          String   @id @default(cuid())
+  codigo      String
+  nome        String
+  orgaoId     String
+  exercicioId String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  orgao     Orgao     @relation(fields: [orgaoId], references: [id], onDelete: Cascade)
+  exercicio Exercicio @relation(fields: [exercicioId], references: [id], onDelete: Cascade)
+  dotacoes  Dotacao[]
+
+  @@unique([exercicioId, orgaoId, codigo])
+  @@index([orgaoId])
+  @@index([exercicioId])
+}
+
+// Função (classificação funcional).
+model Funcao {
+  id          String   @id @default(cuid())
+  codigo      String
+  nome        String
+  exercicioId String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  exercicio  Exercicio   @relation(fields: [exercicioId], references: [id], onDelete: Cascade)
+  subfuncoes Subfuncao[]
+  dotacoes   Dotacao[]
+
+  @@unique([exercicioId, codigo])
+  @@index([exercicioId])
+}
+
+// Subfunção (pertence a uma Função).
+model Subfuncao {
+  id          String   @id @default(cuid())
+  codigo      String
+  nome        String
+  funcaoId    String
+  exercicioId String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  funcao    Funcao    @relation(fields: [funcaoId], references: [id], onDelete: Cascade)
+  exercicio Exercicio @relation(fields: [exercicioId], references: [id], onDelete: Cascade)
+  dotacoes  Dotacao[]
+
+  @@unique([exercicioId, funcaoId, codigo])
+  @@index([funcaoId])
+  @@index([exercicioId])
+}
+
+// Programa (classificação programática; deve constar no PPA do exercício).
+model Programa {
+  id          String   @id @default(cuid())
+  codigo      String
+  nome        String
+  exercicioId String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  exercicio   Exercicio       @relation(fields: [exercicioId], references: [id], onDelete: Cascade)
+  acoes       Acao[]
+  dotacoes    Dotacao[]
+  prioridades PrioridadeLDO[]
+
+  @@unique([exercicioId, codigo])
+  @@index([exercicioId])
+}
+
+// Ação (pertence a um Programa; projeto/atividade/operação especial).
+model Acao {
+  id          String   @id @default(cuid())
+  codigo      String
+  nome        String
+  tipo        TipoAcao
+  programaId  String
+  exercicioId String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  programa    Programa        @relation(fields: [programaId], references: [id], onDelete: Cascade)
+  exercicio   Exercicio       @relation(fields: [exercicioId], references: [id], onDelete: Cascade)
+  dotacoes    Dotacao[]
+  prioridades PrioridadeLDO[]
+
+  @@unique([exercicioId, programaId, codigo])
+  @@index([programaId])
+  @@index([exercicioId])
+}
+
+// Natureza da Despesa (categoria econômica → grupo → modalidade → elemento).
+// Os componentes são atributos da própria entidade; a referência a ela é por FK.
+model NaturezaDespesa {
+  id                  String   @id @default(cuid())
+  codigo              String
+  categoriaEconomica  String
+  grupo               String
+  modalidadeAplicacao String
+  elemento            String
+  exercicioId         String
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  exercicio Exercicio @relation(fields: [exercicioId], references: [id], onDelete: Cascade)
+  dotacoes  Dotacao[]
+
+  @@unique([exercicioId, codigo])
+  @@index([exercicioId])
+}
+
+// Fonte de Recurso.
+model FonteRecurso {
+  id          String   @id @default(cuid())
+  codigo      String
+  nome        String
+  exercicioId String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  exercicio Exercicio @relation(fields: [exercicioId], references: [id], onDelete: Cascade)
+  dotacoes  Dotacao[]
+
+  @@unique([exercicioId, codigo])
+  @@index([exercicioId])
+}
+
+// Prioridade/meta da LDO (usada na checagem ADERENCIA_LDO do motor).
+model PrioridadeLDO {
+  id          String   @id @default(cuid())
+  descricao   String
+  programaId  String
+  acaoId      String?
+  exercicioId String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  programa  Programa  @relation(fields: [programaId], references: [id], onDelete: Cascade)
+  acao      Acao?     @relation(fields: [acaoId], references: [id], onDelete: SetNull)
+  exercicio Exercicio @relation(fields: [exercicioId], references: [id], onDelete: Cascade)
+
+  @@index([programaId])
+  @@index([acaoId])
+  @@index([exercicioId])
+}
+
+// ============================================================================
+// INSTRUMENTOS DE PLANEJAMENTO — base das emendas e acompanhamento
+// ============================================================================
+
+// InstrumentoPlanejamento: o PROJETO_LEI serve de base às emendas; a LEI_APROVADA
+// liga-se ao PL de origem (instrumentoOrigemId) para acompanhamento.
+model InstrumentoPlanejamento {
+  id                  String             @id @default(cuid())
+  tipo                TipoInstrumento
+  especie             EspecieInstrumento
+  numero              String
+  ementa              String
+  exercicioId         String
+  status              StatusInstrumento  @default(EM_ELABORACAO)
+  arquivoUrl          String?
+  dataEnvio           DateTime?
+  dataAprovacao       DateTime?
+  dataVigencia        DateTime?
+  instrumentoOrigemId String?
+  createdAt           DateTime           @default(now())
+  updatedAt           DateTime           @updatedAt
+
+  exercicio         Exercicio                 @relation(fields: [exercicioId], references: [id], onDelete: Cascade)
+  // Auto-relação: LEI_APROVADA (origem) ← PROJETO_LEI.
+  instrumentoOrigem InstrumentoPlanejamento?  @relation("InstrumentoOrigem", fields: [instrumentoOrigemId], references: [id])
+  derivados         InstrumentoPlanejamento[] @relation("InstrumentoOrigem")
+
+  // A base estruturada de dotações é vinculada a UM instrumento.
+  dotacoes Dotacao[]
+  // Emendas apresentadas sobre este instrumento (quando é o PROJETO_LEI base).
+  emendas  Emenda[]
+
+  @@index([exercicioId])
+  @@index([instrumentoOrigemId])
+  @@index([exercicioId, especie, status])
+}
+
+// Dotação orçamentária: classificação completa por FK, vinculada a um instrumento.
+model Dotacao {
+  id                    String   @id @default(cuid())
+  instrumentoId         String
+  exercicioId           String
+  orgaoId               String
+  unidadeOrcamentariaId String
+  funcaoId              String
+  subfuncaoId           String
+  programaId            String
+  acaoId                String
+  naturezaDespesaId     String
+  fonteRecursoId        String
+  valorInicial          Decimal  @db.Decimal(18, 2)
+  valorAtual            Decimal  @db.Decimal(18, 2)
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  instrumento         InstrumentoPlanejamento @relation(fields: [instrumentoId], references: [id], onDelete: Cascade)
+  exercicio           Exercicio               @relation(fields: [exercicioId], references: [id], onDelete: Cascade)
+  orgao               Orgao                   @relation(fields: [orgaoId], references: [id])
+  unidadeOrcamentaria UnidadeOrcamentaria     @relation(fields: [unidadeOrcamentariaId], references: [id])
+  funcao              Funcao                  @relation(fields: [funcaoId], references: [id])
+  subfuncao           Subfuncao               @relation(fields: [subfuncaoId], references: [id])
+  programa            Programa                @relation(fields: [programaId], references: [id])
+  acao                Acao                    @relation(fields: [acaoId], references: [id])
+  naturezaDespesa     NaturezaDespesa         @relation(fields: [naturezaDespesaId], references: [id])
+  fonteRecurso        FonteRecurso            @relation(fields: [fonteRecursoId], references: [id])
+
+  // Emendas que referenciam esta dotação (alvo, origem e destino de remanejamento).
+  emendas        Emenda[] @relation("EmendaDotacao")
+  emendasOrigem  Emenda[] @relation("EmendaDotacaoOrigem")
+  emendasDestino Emenda[] @relation("EmendaDotacaoDestino")
+
+  // Índice único da classificação completa por instrumento.
+  @@unique([instrumentoId, orgaoId, unidadeOrcamentariaId, funcaoId, subfuncaoId, programaId, acaoId, naturezaDespesaId, fonteRecursoId])
+  @@index([instrumentoId])
+  @@index([exercicioId])
+  @@index([programaId])
+  @@index([acaoId])
+}
+
+// ============================================================================
+// DOCUMENTOS NORMATIVOS E PARÂMETROS DE VALIDAÇÃO
+// ============================================================================
+
+// Documento normativo (LOM, Regimento Interno, outros) — repositório consultável.
+model DocumentoNormativo {
+  id           String    @id @default(cuid())
+  tipo         TipoNorma
+  titulo       String
+  numero       String?
+  arquivoUrl   String
+  dataVigencia DateTime?
+  ativo        Boolean   @default(true)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  // Parâmetros que citam este documento como fundamento jurídico.
+  parametros ParametroValidacao[]
+
+  @@index([tipo])
+  @@index([ativo])
+}
+
+// Parâmetro de validação (regra geral ou por exercício). Ex.: teto por autor,
+// percentual impositivo, exigência de aderência à LDO. Pode citar um fundamento.
+model ParametroValidacao {
+  id                  String          @id @default(cuid())
+  escopo              EscopoParametro @default(GERAL)
+  exercicioId         String?
+  chave               String
+  valor               String
+  modo                ModoValidacao?
+  fundamentoNormaId   String?
+  fundamentoDescricao String?
+  createdAt           DateTime        @default(now())
+  updatedAt           DateTime        @updatedAt
+
+  exercicio       Exercicio?          @relation(fields: [exercicioId], references: [id], onDelete: Cascade)
+  fundamentoNorma DocumentoNormativo? @relation(fields: [fundamentoNormaId], references: [id], onDelete: SetNull)
+
+  @@unique([exercicioId, chave])
+  @@index([escopo])
+  @@index([exercicioId])
+}
+
+// ============================================================================
+// EMENDAS PARLAMENTARES
+// ============================================================================
+
+// Autor da emenda (vereador). Vínculo opcional a um usuário do sistema (1:1).
+model Autor {
+  id        String   @id @default(cuid())
+  nome      String
+  cargo     String
+  usuarioId String?  @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  usuario User?    @relation(fields: [usuarioId], references: [id], onDelete: SetNull)
+  emendas Emenda[]
+
+  @@index([usuarioId])
+}
+
+// Emenda: apresentada sobre o PROJETO_LEI base, referencia uma Dotacao existente.
+// `objeto` é o campo narrativo livre (além de justificativa).
+model Emenda {
+  id                String       @id @default(cuid())
+  numero            String
+  exercicioId       String
+  instrumentoBaseId String
+  autorId           String
+  dotacaoId         String
+  tipo              TipoEmenda
+  objeto            String
+  justificativa     String
+  valor             Decimal      @db.Decimal(18, 2)
+  status            StatusEmenda @default(RASCUNHO)
+  // Para REMANEJAMENTO: origem e destino.
+  dotacaoOrigemId   String?
+  dotacaoDestinoId  String?
+  createdAt         DateTime     @default(now())
+  updatedAt         DateTime     @updatedAt
+
+  exercicio       Exercicio               @relation(fields: [exercicioId], references: [id], onDelete: Cascade)
+  instrumentoBase InstrumentoPlanejamento @relation(fields: [instrumentoBaseId], references: [id])
+  autor           Autor                   @relation(fields: [autorId], references: [id])
+  dotacao         Dotacao                 @relation("EmendaDotacao", fields: [dotacaoId], references: [id])
+  dotacaoOrigem   Dotacao?                @relation("EmendaDotacaoOrigem", fields: [dotacaoOrigemId], references: [id])
+  dotacaoDestino  Dotacao?                @relation("EmendaDotacaoDestino", fields: [dotacaoDestinoId], references: [id])
+  validacoes      ValidacaoEmenda[]
+
+  // Regra estrutural: dotacaoId e instrumentoBaseId obrigatórios e do mesmo
+  // exercício (coerência de exercício é reforçada no motor/API — PROMPT 5/6).
+  @@unique([exercicioId, numero])
+  @@index([exercicioId])
+  @@index([instrumentoBaseId])
+  @@index([autorId])
+  @@index([dotacaoId])
+  @@index([status])
+}
+
+// Registro de uma execução do motor de validação sobre uma emenda.
+model ValidacaoEmenda {
+  id          String             @id @default(cuid())
+  emendaId    String
+  resultado   ResultadoValidacao
+  executadaEm DateTime           @default(now())
+  itens       Json
+
+  emenda Emenda @relation(fields: [emendaId], references: [id], onDelete: Cascade)
+
+  @@index([emendaId])
+  @@index([executadaEm])
+}
+
+// ============================================================================
+// ACESSO E AUDITORIA — Auth.js (modelos técnicos em inglês) + AuditLog
+// ============================================================================
+
+// Usuário do sistema. Modelo `User` por exigência do @auth/prisma-adapter.
+// Campos de domínio: poder, role, passwordHash (credenciais — PROMPT 9) e o
+// vínculo opcional a Autor (back-relation do 1:1).
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String?   @unique
+  emailVerified DateTime?
+  image         String?
+  passwordHash  String?
+  poder         Poder?
+  role          Role      @default(LEG_CONSULTA)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  accounts  Account[]
+  sessions  Session[]
+  autor     Autor?
+  auditLogs AuditLog[]
+
+  @@index([role])
+  @@index([poder])
+}
+
+// Auth.js — conta de provedor externo (OAuth) ligada ao usuário.
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@index([userId])
+}
+
+// Auth.js — sessão persistida.
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+// Auth.js — token de verificação (magic links / e-mail).
+model VerificationToken {
+  identifier String
+  token      String
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+// Trilha de auditoria: toda mutação relevante grava antes/depois.
+model AuditLog {
+  id          String   @id @default(cuid())
+  usuarioId   String?
+  entidade    String
+  entidadeId  String
+  acao        String
+  dadosAntes  Json?
+  dadosDepois Json?
+  criadoEm    DateTime @default(now())
+
+  usuario User? @relation(fields: [usuarioId], references: [id], onDelete: SetNull)
+
+  @@index([usuarioId])
+  @@index([entidade, entidadeId])
+  @@index([criadoEm])
 }

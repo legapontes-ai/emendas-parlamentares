@@ -52,6 +52,57 @@ Prisma 7 usa **driver adapters**; não lê `DATABASE_URL` implicitamente.
 - **Migrations / CLI** (`prisma.config.ts`) → `DIRECT_URL` (conexão **direta**,
   não-pooled — correta para DDL).
 
+## Modelo de dados (Prisma)
+
+Regra central: **nenhuma classificação orçamentária é texto livre** — programa,
+ação, órgão, unidade, natureza e fonte são sempre FK. A `Emenda` referencia uma
+`Dotacao` existente, vinculada ao `InstrumentoPlanejamento` (PROJETO_LEI) base do
+exercício. O ciclo de acompanhamento liga a LEI_APROVADA ao PROJETO_LEI de origem.
+
+```mermaid
+erDiagram
+  Exercicio ||--o{ InstrumentoPlanejamento : possui
+  Exercicio ||--o{ Orgao : possui
+  Exercicio ||--o{ Programa : possui
+  Exercicio ||--o{ Dotacao : possui
+  Exercicio ||--o{ Emenda : possui
+
+  Orgao ||--o{ UnidadeOrcamentaria : contem
+  Funcao ||--o{ Subfuncao : contem
+  Programa ||--o{ Acao : contem
+  Programa ||--o{ PrioridadeLDO : prioriza
+  Acao |o--o{ PrioridadeLDO : prioriza
+
+  InstrumentoPlanejamento ||--o{ Dotacao : "gera base"
+  InstrumentoPlanejamento |o--o{ InstrumentoPlanejamento : "origem (PL - lei)"
+
+  Dotacao }o--|| Orgao : classifica
+  Dotacao }o--|| UnidadeOrcamentaria : classifica
+  Dotacao }o--|| Funcao : classifica
+  Dotacao }o--|| Subfuncao : classifica
+  Dotacao }o--|| Programa : classifica
+  Dotacao }o--|| Acao : classifica
+  Dotacao }o--|| NaturezaDespesa : classifica
+  Dotacao }o--|| FonteRecurso : classifica
+
+  Emenda }o--|| InstrumentoPlanejamento : "base (PL)"
+  Emenda }o--|| Autor : "de autoria de"
+  Emenda }o--|| Dotacao : "incide sobre"
+  Emenda ||--o{ ValidacaoEmenda : registra
+
+  ParametroValidacao }o--o| Exercicio : "escopo"
+  ParametroValidacao }o--o| DocumentoNormativo : "fundamenta-se em"
+
+  User |o--o| Autor : "e (opcional)"
+  User ||--o{ Account : tem
+  User ||--o{ Session : tem
+  User ||--o{ AuditLog : gera
+```
+
+**Poderes no modelo:** `User.poder` + `User.role` controlam o acesso. O Executivo
+sobe `InstrumentoPlanejamento` e gera `Dotacao`; o Legislativo apresenta `Emenda`
+sobre essa base; a `ValidacaoEmenda` guarda o resultado do motor (PROMPT 5).
+
 ## Variáveis de ambiente
 
 Ver `.env.example`. Nunca versione o `.env` real.
