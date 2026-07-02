@@ -1,0 +1,204 @@
+import "server-only";
+import { prisma } from "./prisma";
+import { safe } from "./queries";
+
+// ============================================================================
+// Cascata de seleção assistida (sempre restrita ao instrumento base). Nenhum
+// valor é digitado — tudo vem da base do instrumento.
+// ============================================================================
+
+export async function listarOrgaosBase(instrumentoId: string) {
+  return safe(
+    () =>
+      prisma.orgao.findMany({
+        where: { dotacoes: { some: { instrumentoId } } },
+        select: { id: true, codigo: true, nome: true },
+        orderBy: { codigo: "asc" },
+      }),
+    []
+  );
+}
+
+export async function listarUnidadesBase(instrumentoId: string, orgaoId: string) {
+  return safe(
+    () =>
+      prisma.unidadeOrcamentaria.findMany({
+        where: { orgaoId, dotacoes: { some: { instrumentoId } } },
+        select: { id: true, codigo: true, nome: true },
+        orderBy: { codigo: "asc" },
+      }),
+    []
+  );
+}
+
+export async function listarProgramasBase(
+  instrumentoId: string,
+  filtros: { orgaoId?: string; unidadeId?: string } = {}
+) {
+  return safe(
+    () =>
+      prisma.programa.findMany({
+        where: {
+          dotacoes: {
+            some: {
+              instrumentoId,
+              orgaoId: filtros.orgaoId,
+              unidadeOrcamentariaId: filtros.unidadeId,
+            },
+          },
+        },
+        select: { id: true, codigo: true, nome: true },
+        orderBy: { codigo: "asc" },
+      }),
+    []
+  );
+}
+
+export async function listarAcoesBase(
+  instrumentoId: string,
+  programaId: string,
+  filtros: { orgaoId?: string; unidadeId?: string } = {}
+) {
+  return safe(
+    () =>
+      prisma.acao.findMany({
+        where: {
+          programaId,
+          dotacoes: {
+            some: {
+              instrumentoId,
+              programaId,
+              orgaoId: filtros.orgaoId,
+              unidadeOrcamentariaId: filtros.unidadeId,
+            },
+          },
+        },
+        select: { id: true, codigo: true, nome: true, tipo: true },
+        orderBy: { codigo: "asc" },
+      }),
+    []
+  );
+}
+
+export type DotacaoOpcao = {
+  id: string;
+  valorAtual: number;
+  naturezaCodigo: string;
+  naturezaNome: string;
+  fonteCodigo: string;
+  fonteNome: string;
+};
+
+export async function listarDotacoesBase(filtros: {
+  instrumentoId: string;
+  orgaoId?: string;
+  unidadeId?: string;
+  programaId?: string;
+  acaoId?: string;
+}): Promise<DotacaoOpcao[]> {
+  const rows = await safe(
+    () =>
+      prisma.dotacao.findMany({
+        where: {
+          instrumentoId: filtros.instrumentoId,
+          orgaoId: filtros.orgaoId,
+          unidadeOrcamentariaId: filtros.unidadeId,
+          programaId: filtros.programaId,
+          acaoId: filtros.acaoId,
+        },
+        include: {
+          naturezaDespesa: { select: { codigo: true, elemento: true } },
+          fonteRecurso: { select: { codigo: true, nome: true } },
+        },
+        orderBy: { createdAt: "asc" },
+      }),
+    []
+  );
+  return rows.map((d) => ({
+    id: d.id,
+    valorAtual: Number(d.valorAtual),
+    naturezaCodigo: d.naturezaDespesa.codigo,
+    naturezaNome: d.naturezaDespesa.elemento,
+    fonteCodigo: d.fonteRecurso.codigo,
+    fonteNome: d.fonteRecurso.nome,
+  }));
+}
+
+// PROJETO_LEI aberto para emendas no exercício (status EM_TRAMITACAO).
+export async function getInstrumentoBaseAberto(exercicioAno: number | null) {
+  if (!exercicioAno) return null;
+  return safe(
+    () =>
+      prisma.instrumentoPlanejamento.findFirst({
+        where: {
+          especie: "PROJETO_LEI",
+          status: "EM_TRAMITACAO",
+          exercicio: { ano: exercicioAno },
+        },
+        select: {
+          id: true,
+          numero: true,
+          tipo: true,
+          exercicioId: true,
+          exercicio: { select: { ano: true } },
+        },
+        orderBy: { createdAt: "desc" },
+      }),
+    null
+  );
+}
+
+// ============================================================================
+// Emendas — listagem e detalhe (Decimal → number).
+// ============================================================================
+
+export async function listarEmendas(filtros: {
+  exercicioAno?: number | null;
+  autorUsuarioId?: string;
+}) {
+  const rows = await safe(
+    () =>
+      prisma.emenda.findMany({
+        where: {
+          exercicio: filtros.exercicioAno ? { ano: filtros.exercicioAno } : undefined,
+          autor: filtros.autorUsuarioId ? { usuarioId: filtros.autorUsuarioId } : undefined,
+        },
+        include: {
+          autor: { select: { nome: true } },
+          dotacao: {
+            select: {
+              programa: { select: { codigo: true, nome: true } },
+              acao: { select: { codigo: true, nome: true } },
+            },
+          },
+        },
+        orderBy: { createdAt: "desc" },
+      }),
+    []
+  );
+  return rows.map((e) => ({
+    id: e.id,
+    numero: e.numero,
+    tipo: e.tipo,
+    status: e.status,
+    valor: Number(e.valor),
+    objeto: e.objeto,
+    autor: e.autor.nome,
+    programa: `${e.dotacao.programa.codigo} — ${e.dotacao.programa.nome}`,
+    acao: `${e.dotacao.acao.codigo} — ${e.dotacao.acao.nome}`,
+  }));
+}
+
+export async function getEmendaDetalhe(id: string) {
+  return safe(
+    () =>
+      prisma.emenda.findUnique({
+        where: { id },
+        include: {
+          autor: { select: { nome: true, usuarioId: true } },
+          validacoes: { orderBy: { executadaEm: "desc" }, take: 1 },
+        },
+      }),
+    null
+  );
+}

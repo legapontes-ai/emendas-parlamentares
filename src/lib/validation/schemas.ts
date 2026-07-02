@@ -6,6 +6,7 @@ import {
   Poder,
   Role,
   StatusInstrumento,
+  TipoEmenda,
   TipoInstrumento,
   TipoNorma,
 } from "@/generated/prisma/enums";
@@ -114,3 +115,36 @@ export type UsuarioInput = z.input<typeof usuarioSchema>;
 
 // Espécie usada ao criar instrumento base (sempre PROJETO_LEI na aba 3).
 export const ESPECIE_BASE = EspecieInstrumento.PROJETO_LEI;
+
+// ------------------------------------------------------------------ Emendas
+// Valor monetário tolerante a "1.234,56" / "1234.56" / número.
+const valorMonetario = z.preprocess((v) => {
+  if (typeof v === "number") return v;
+  const s = String(v ?? "").trim();
+  if (!s) return NaN;
+  return Number(s.replace(/\./g, "").replace(",", "."));
+}, z.number({ message: "Valor inválido." }).positive("O valor deve ser maior que zero."));
+
+export const emendaRascunhoSchema = z
+  .object({
+    instrumentoBaseId: z.string().trim().min(1, "Selecione o projeto de lei base."),
+    dotacaoId: z.string().trim().min(1, "Selecione a dotação."),
+    tipo: z.enum(valores(TipoEmenda)),
+    objeto: z.string().trim().min(1, "Descreva o objeto."),
+    justificativa: z.string().trim().min(1, "Informe a justificativa."),
+    valor: valorMonetario,
+    dotacaoOrigemId: textoOpcional,
+    dotacaoDestinoId: textoOpcional,
+  })
+  .refine(
+    (d) =>
+      d.tipo !== TipoEmenda.REMANEJAMENTO ||
+      (!!d.dotacaoOrigemId && !!d.dotacaoDestinoId),
+    { message: "Remanejamento exige dotação de origem e destino.", path: ["dotacaoOrigemId"] }
+  );
+
+export type EmendaRascunhoInput = z.input<typeof emendaRascunhoSchema>;
+
+export const parecerSchema = z.object({
+  parecer: z.string().trim().min(1, "Informe o parecer."),
+});
