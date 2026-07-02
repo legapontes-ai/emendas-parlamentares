@@ -222,15 +222,6 @@ export async function subirLeiAprovada(input: unknown): Promise<ActionResult> {
   }
 }
 
-// Geração da base estruturada — implementada no PROMPT 4 (importação).
-export async function gerarBase(_instrumentoId: string): Promise<ActionResult> {
-  await exigirPapel(Role.EXEC_ADMIN, Role.EXEC_PLANEJAMENTO);
-  return {
-    ok: false,
-    error: "A geração da base de dotações será habilitada no PROMPT 4 (importação).",
-  };
-}
-
 // ============================================================== USUÁRIOS
 export async function criarUsuario(input: unknown): Promise<ActionResult> {
   const gate = await exigirPapel(Role.EXEC_ADMIN, Role.LEG_ADMIN);

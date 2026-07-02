@@ -7,6 +7,7 @@ import { podeCriarEmenda, podeGerirEmenda, podeTramitar } from "@/lib/authz";
 import { registrarAuditoria } from "@/lib/audit";
 import { validarEmenda } from "@/lib/validation/motorEmenda";
 import type { ResultadoMotor } from "@/lib/validation/motor";
+import { rateLimit } from "@/lib/rate-limit";
 import { emendaRascunhoSchema, parecerSchema } from "@/lib/validation/schemas";
 import { TipoEmenda } from "@/generated/prisma/enums";
 
@@ -171,6 +172,8 @@ export async function submeterEmenda(id: string): Promise<EmendaResult> {
   if (!emenda) return { ok: false, error: "Emenda não encontrada." };
   if (!podeGerirEmenda(u, { autorUsuarioId: emenda.autor.usuarioId }))
     return { ok: false, error: "Sem permissão." };
+  if (!rateLimit(`submeter:${u.id}`, 20, 60_000))
+    return { ok: false, error: "Muitas submissões em pouco tempo. Aguarde um instante." };
 
   // Revalida SEMPRE no servidor antes de submeter (não confia no cliente).
   let resultado: ResultadoMotor;

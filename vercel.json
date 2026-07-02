@@ -1,0 +1,4 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "buildCommand": "prisma generate && if [ -n \"$DIRECT_URL\" ]; then prisma migrate deploy; fi && next build"
+}

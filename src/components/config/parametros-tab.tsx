@@ -10,7 +10,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/empty-state";
 import { FormDialog } from "./form-dialog";
-import { SelectField, TextAreaField, TextField, type Opcao } from "./fields";
+import { SelectField, TextField, type Opcao } from "./fields";
 import { ActionButton } from "./action-button";
 import { criarParametro, excluirParametro } from "@/lib/actions/config";
 import {
