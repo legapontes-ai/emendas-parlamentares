@@ -1,4 +1,5 @@
 import "dotenv/config";
+import bcrypt from "bcryptjs";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient, Prisma } from "../src/generated/prisma/client";
 
@@ -247,13 +248,15 @@ async function main() {
     { nome: "Vereador Exemplo", email: "vereador@camara.gov.br", poder: "LEGISLATIVO", role: "LEG_AUTOR" },
     { nome: "Consulta Legislativo", email: "leg.consulta@camara.gov.br", poder: "LEGISLATIVO", role: "LEG_CONSULTA" },
   ];
+  const senhaHash = await bcrypt.hash("mudar@123", 10);
   for (const u of usuarios) {
     await prisma.user.upsert({
       where: { email: u.email },
-      create: { name: u.nome, email: u.email, poder: u.poder as never, role: u.role as never },
-      update: { name: u.nome, poder: u.poder as never, role: u.role as never },
+      create: { name: u.nome, email: u.email, poder: u.poder as never, role: u.role as never, passwordHash: senhaHash },
+      update: { name: u.nome, poder: u.poder as never, role: u.role as never, passwordHash: senhaHash },
     });
   }
+  console.log('  usuários com senha padrão "mudar@123"');
   // Vincula o vereador de exemplo a um Autor.
   const vereador = await prisma.user.findUnique({ where: { email: "vereador@camara.gov.br" } });
   if (vereador) {

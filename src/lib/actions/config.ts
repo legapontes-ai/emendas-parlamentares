@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
+import bcrypt from "bcryptjs";
 import { Role } from "@/generated/prisma/enums";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/session";
@@ -240,12 +241,14 @@ export async function criarUsuario(input: unknown): Promise<ActionResult> {
   const d = parsed.data;
 
   try {
+    const passwordHash = d.senha ? await bcrypt.hash(d.senha, 10) : null;
     const criado = await prisma.user.create({
       data: {
         name: d.nome,
-        email: d.email,
+        email: d.email.toLowerCase(),
         poder: (d.poder ?? null) as never,
         role: d.role as never,
+        passwordHash,
       },
     });
     await registrarAuditoria({

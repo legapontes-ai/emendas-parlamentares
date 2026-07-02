@@ -50,6 +50,12 @@ export function UsuariosTab({ usuarios }: { usuarios: Usuario[] }) {
             required
             options={opcoes(ROTULO_ROLE)}
           />
+          <TextField
+            name="senha"
+            label="Senha (mín. 8; opcional)"
+            type="password"
+            placeholder="deixe em branco para definir depois"
+          />
         </FormDialog>
       </div>
 

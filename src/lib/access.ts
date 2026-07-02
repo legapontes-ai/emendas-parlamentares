@@ -38,3 +38,15 @@ export async function requireRole(...roles: Role[]): Promise<SessionUser> {
   }
   return user;
 }
+
+// Guard unificado por Poder e/ou papéis (Prompt 9). SUPER_ADMIN passa por tudo.
+export async function requireAccess(opts: {
+  poder?: Poder;
+  roles?: Role[];
+}): Promise<SessionUser> {
+  const user = await getCurrentUser();
+  if (user.role === Role.SUPER_ADMIN) return user;
+  if (opts.poder && user.poder !== opts.poder) redirect("/hub?erro=acesso-negado");
+  if (opts.roles && !opts.roles.includes(user.role)) redirect("/hub?erro=acesso-negado");
+  return user;
+}

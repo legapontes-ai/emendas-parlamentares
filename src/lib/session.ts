@@ -1,6 +1,8 @@
 import "server-only";
 import { cookies } from "next/headers";
+import { redirect } from "next/navigation";
 import { Poder, Role } from "@/generated/prisma/enums";
+import { auth } from "./auth";
 
 // ============================================================================
 // SESSÃO TEMPORÁRIA (PROMPT 2) — substituída pelo Auth.js real no PROMPT 9.
@@ -46,21 +48,35 @@ function ehRole(valor: string | undefined): valor is Role {
 }
 
 export async function getCurrentUser(): Promise<SessionUser> {
-  const jar = await cookies();
-  const roleCookie = jar.get(DEV_COOKIE_ROLE)?.value;
-  const role: Role = ehRole(roleCookie) ? roleCookie : Role.SUPER_ADMIN;
+  // 1) Sessão real do Auth.js (PROMPT 9).
+  try {
+    const session = await auth();
+    if (session?.user?.role) {
+      return {
+        id: session.user.id,
+        nome: session.user.name ?? session.user.email ?? "Usuário",
+        email: session.user.email ?? "",
+        poder: session.user.poder ?? null,
+        role: session.user.role,
+      };
+    }
+  } catch {
+    // segue para o fallback
+  }
 
-  const poderCookie = jar.get(DEV_COOKIE_PODER)?.value;
-  const poder: Poder | null =
-    poderCookie === Poder.LEGISLATIVO || poderCookie === Poder.EXECUTIVO
-      ? (poderCookie as Poder)
-      : poderPadraoDoRole(role);
+  // 2) Fallback de desenvolvimento (sessão-cookie) — NUNCA em produção.
+  if (process.env.NODE_ENV !== "production") {
+    const jar = await cookies();
+    const roleCookie = jar.get(DEV_COOKIE_ROLE)?.value;
+    const role: Role = ehRole(roleCookie) ? roleCookie : Role.SUPER_ADMIN;
+    const poderCookie = jar.get(DEV_COOKIE_PODER)?.value;
+    const poder: Poder | null =
+      poderCookie === Poder.LEGISLATIVO || poderCookie === Poder.EXECUTIVO
+        ? (poderCookie as Poder)
+        : poderPadraoDoRole(role);
+    return { id: "dev-user", nome: nomePorRole(role), email: "dev@local", poder, role };
+  }
 
-  return {
-    id: "dev-user",
-    nome: nomePorRole(role),
-    email: "dev@local",
-    poder,
-    role,
-  };
+  // 3) Produção sem sessão → login.
+  redirect("/login");
 }

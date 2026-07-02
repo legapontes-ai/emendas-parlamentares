@@ -1,8 +1,9 @@
 "use client";
 
 import { useTransition } from "react";
-import { Check, ChevronsUpDown, UserCog } from "lucide-react";
+import { Check, ChevronsUpDown, LogOut, UserCog } from "lucide-react";
 import { Role, type Poder } from "@/generated/prisma/enums";
+import { sair } from "@/lib/actions/auth";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -81,6 +82,11 @@ export function PerfilSwitcher({
               {r === role ? <Check className="size-4" aria-hidden /> : null}
             </DropdownMenuItem>
           ))}
+          <DropdownMenuSeparator />
+          <DropdownMenuItem onSelect={() => start(() => sair())}>
+            <LogOut className="size-4" aria-hidden />
+            Sair
+          </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
     </div>

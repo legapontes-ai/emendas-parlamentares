@@ -103,12 +103,17 @@ export const leiAprovadaSchema = z.object({
 export type LeiAprovadaInput = z.input<typeof leiAprovadaSchema>;
 
 // ----------------------------------------------------------------- Usuários
-// Senha/credenciais são definidas no PROMPT 9 (hashing). Aqui só cadastro básico.
 export const usuarioSchema = z.object({
   nome: z.string().trim().min(1, "Informe o nome."),
   email: z.string().trim().email("E-mail inválido."),
   poder: enumOpcional(Poder),
   role: z.enum(valores(Role)),
+  // Senha opcional (mín. 8). Se ausente, o usuário fica sem credencial até definir.
+  senha: z
+    .string()
+    .min(8, "A senha deve ter ao menos 8 caracteres.")
+    .optional()
+    .or(z.literal("").transform(() => undefined)),
 });
 
 export type UsuarioInput = z.input<typeof usuarioSchema>;
