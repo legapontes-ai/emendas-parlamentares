@@ -47,3 +47,5 @@ next-env.d.ts
 
 # uploads locais (LOM, RI, instrumentos de planejamento)
 /uploads
+
+.vercel
