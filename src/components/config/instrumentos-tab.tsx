@@ -1,4 +1,3 @@
-import { Database } from "lucide-react";
 import {
   Table,
   TableBody,
@@ -11,12 +10,8 @@ import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/empty-state";
 import { FormDialog } from "./form-dialog";
 import { SelectField, TextAreaField, TextField, type Opcao } from "./fields";
-import { ActionButton } from "./action-button";
-import {
-  criarInstrumentoPL,
-  gerarBase,
-  subirLeiAprovada,
-} from "@/lib/actions/config";
+import { ImportBaseDialog } from "./import-base-dialog";
+import { criarInstrumentoPL, subirLeiAprovada } from "@/lib/actions/config";
 import {
   ROTULO_ESPECIE,
   ROTULO_STATUS_INSTRUMENTO,
@@ -170,15 +165,7 @@ export function InstrumentosTab({
                   <TableCell>{i._count.dotacoes}</TableCell>
                   <TableCell>
                     {i.especie === "PROJETO_LEI" ? (
-                      <ActionButton
-                        action={gerarBase.bind(null, i.id)}
-                        variant="outline"
-                        size="sm"
-                        title="Gerar base de dotações"
-                      >
-                        <Database className="size-4" aria-hidden />
-                        Gerar base
-                      </ActionButton>
+                      <ImportBaseDialog instrumentoId={i.id} />
                     ) : null}
                   </TableCell>
                 </TableRow>
