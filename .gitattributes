@@ -1,0 +1,12 @@
+# Normaliza fins de linha: LF no repositório (build roda em Linux/Vercel).
+* text=auto eol=lf
+
+# Binários — nunca normalizar
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.pdf binary
+*.woff binary
+*.woff2 binary

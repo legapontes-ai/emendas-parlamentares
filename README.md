@@ -3,21 +3,15 @@
 Sistema de Gestão de Emendas Parlamentares para o orçamento público municipal
 brasileiro (PPA / LDO / LOA). Interface separada por **Poder** (Legislativo ×
 Executivo), com base estruturada de dotações gerada a partir dos instrumentos de
-planejamento e apresentação de emendas sem digitação livre de classificação
+planejamento e apresentação de emendas **sem digitação livre** de classificação
 orçamentária.
 
-## Status
+## Stack
 
-🚧 **Em bootstrap.** Este repositório foi inicializado (PROMPT 0 parcial: repo +
-estrutura). O scaffold da aplicação (Next.js + Prisma + shadcn/ui) será executado
-na sequência do playbook.
-
-## Stack pretendida
-
-- **Next.js** (App Router) + **TypeScript**
-- **PostgreSQL** (Neon) + **Prisma**
-- **Auth.js** (next-auth) — autenticação e autorização por Poder/Role
-- **Tailwind CSS** + **shadcn/ui**
+- **Next.js 16** (App Router) + **React 19** + **TypeScript**
+- **PostgreSQL** (Neon) + **Prisma 7** (driver adapter `@prisma/adapter-pg`)
+- **Auth.js** (next-auth v5) — autenticação e autorização por Poder/Role
+- **Tailwind CSS v4** + **shadcn/ui**
 - Deploy em **Vercel**, CI no **GitHub Actions**
 
 ## Papéis e Poderes
@@ -37,22 +31,43 @@ sanção, o Executivo sobe a lei aprovada → todos acompanham.
 
 ## Setup local
 
-> Preenchido no PROMPT 0 (scaffold). Por ora, requer Node.js LTS, uma conta e o
-> `gh` CLI no GitHub, e um projeto no Neon com as connection strings (pooled +
-> direct).
+Pré-requisitos: Node.js LTS, um projeto no **Neon** com as connection strings
+(pooled + direct) e o `gh` CLI autenticado.
 
 ```bash
-# em breve, após o scaffold:
-# npm install
-# cp .env.example .env   # preencher DATABASE_URL, DIRECT_URL, AUTH_SECRET
-# npm run dev
+npm install
+cp .env.example .env          # preencher DATABASE_URL, DIRECT_URL, AUTH_SECRET
+npx auth secret               # gera AUTH_SECRET (opcional)
+npx prisma generate           # gera o Prisma Client em src/generated/prisma
+npx prisma migrate dev        # aplica as migrations (requer .env preenchido)
+npm run dev                   # http://localhost:3000
 ```
+
+## Modelo de conexão (Prisma 7)
+
+Prisma 7 usa **driver adapters**; não lê `DATABASE_URL` implicitamente.
+
+- **Runtime** (`src/lib/prisma.ts`) → `@prisma/adapter-pg` com `DATABASE_URL`
+  (conexão **pooled** do Neon).
+- **Migrations / CLI** (`prisma.config.ts`) → `DIRECT_URL` (conexão **direta**,
+  não-pooled — correta para DDL).
 
 ## Variáveis de ambiente
 
 Ver `.env.example`. Nunca versione o `.env` real.
 
-- `DATABASE_URL` — Postgres pooled (runtime)
-- `DIRECT_URL` — Postgres direto (migrations)
-- `AUTH_SECRET` — segredo do Auth.js
-- `AUTH_URL` — URL base da aplicação
+| Variável        | Uso                                                |
+| --------------- | -------------------------------------------------- |
+| `DATABASE_URL`  | Postgres pooled — runtime da aplicação             |
+| `DIRECT_URL`    | Postgres direto — migrations (Prisma CLI)          |
+| `AUTH_SECRET`   | Segredo do Auth.js (`npx auth secret`)             |
+| `AUTH_URL`      | URL base da aplicação                              |
+
+## Scripts
+
+```bash
+npm run dev      # servidor de desenvolvimento
+npm run build    # build de produção
+npm run start    # servidor de produção
+npm run lint     # ESLint
+```

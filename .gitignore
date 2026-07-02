@@ -1,8 +1,14 @@
+# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
+
 # dependencies
 /node_modules
 /.pnp
 .pnp.*
 .yarn/*
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/versions
 
 # testing
 /coverage
@@ -25,11 +31,8 @@ yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
 
-# env files — NUNCA versionar segredos
-.env
-.env*.local
-.env.development
-.env.production
+# env files — NUNCA versionar segredos; o .env.example (sem valores) é permitido
+.env*
 !.env.example
 
 # vercel
@@ -39,9 +42,8 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
-# prisma
-/prisma/*.db
-/prisma/*.db-journal
+# prisma — client gerado (recriado por `prisma generate`)
+/src/generated
 
-# uploads locais (LOM, RI, instrumentos)
+# uploads locais (LOM, RI, instrumentos de planejamento)
 /uploads
