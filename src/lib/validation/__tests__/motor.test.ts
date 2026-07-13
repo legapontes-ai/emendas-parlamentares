@@ -36,6 +36,10 @@ function ctxValido(over: Partial<ContextoEmenda> = {}): ContextoEmenda {
     modoAderenciaLDO: "ALERTA",
     tetoValorAutor: null,
     somaAutorExistente: 0,
+    reservaSaudePct: null,
+    modoReservaSaude: null,
+    emendaEhSaude: false,
+    somaAutorDemaisExistente: 0,
   };
   return { ...base, ...over };
 }
@@ -127,6 +131,61 @@ describe("avaliarEmenda", () => {
     );
     expect(item(r, "TIPO_COERENTE").status).toBe("FALHA");
     expect(r.resultado).toBe("INVALIDA");
+  });
+
+  it("reserva da saúde: demais áreas dentro do limite → OK", () => {
+    // cota 500, reserva 50% → limite p/ demais áreas = 250
+    const r = avaliarEmenda(
+      ctxValido({
+        tetoValorAutor: 500,
+        reservaSaudePct: 50,
+        modoReservaSaude: "BLOQUEANTE",
+        somaAutorDemaisExistente: 100,
+        emenda: { ...ctxValido().emenda, valor: 100 },
+      })
+    );
+    expect(item(r, "RESERVA_SAUDE").status).toBe("OK");
+    expect(r.resultado).toBe("VALIDA");
+  });
+
+  it("reserva da saúde invadida: BLOQUEANTE bloqueia; ALERTA só avisa", () => {
+    const acima = {
+      tetoValorAutor: 500,
+      reservaSaudePct: 50,
+      somaAutorDemaisExistente: 200,
+      emenda: { ...ctxValido().emenda, valor: 100 }, // demais somam 300 > 250
+    };
+    const bloqueante = avaliarEmenda(
+      ctxValido({ ...acima, modoReservaSaude: "BLOQUEANTE" })
+    );
+    expect(item(bloqueante, "RESERVA_SAUDE").status).toBe("FALHA");
+    expect(bloqueante.resultado).toBe("INVALIDA");
+
+    const alerta = avaliarEmenda(
+      ctxValido({ ...acima, modoReservaSaude: "ALERTA" })
+    );
+    expect(item(alerta, "RESERVA_SAUDE").status).toBe("ALERTA");
+    expect(alerta.resultado).toBe("VALIDA");
+  });
+
+  it("emenda de saúde não consome o limite das demais áreas", () => {
+    const r = avaliarEmenda(
+      ctxValido({
+        tetoValorAutor: 500,
+        reservaSaudePct: 50,
+        modoReservaSaude: "BLOQUEANTE",
+        emendaEhSaude: true,
+        somaAutorDemaisExistente: 250, // limite já esgotado pelas demais
+        emenda: { ...ctxValido().emenda, valor: 200 },
+      })
+    );
+    expect(item(r, "RESERVA_SAUDE").status).toBe("OK");
+    expect(r.resultado).toBe("VALIDA");
+  });
+
+  it("sem reserva configurada → RESERVA_SAUDE em OK (não interfere)", () => {
+    const r = avaliarEmenda(ctxValido());
+    expect(item(r, "RESERVA_SAUDE").status).toBe("OK");
   });
 
   it("PPA não cadastrado → ALERTA (não bloqueia)", () => {

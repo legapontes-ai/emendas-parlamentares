@@ -53,7 +53,12 @@ export async function validarEmenda(emendaId: string): Promise<ResultadoMotor> {
     include: {
       exercicio: { select: { status: true } },
       instrumentoBase: { select: { status: true } },
-      dotacao: { include: { acao: { select: { programaId: true } } } },
+      dotacao: {
+        include: {
+          acao: { select: { programaId: true } },
+          funcao: { select: { codigo: true } },
+        },
+      },
       dotacaoOrigem: { include: { acao: { select: { programaId: true } } } },
       dotacaoDestino: { include: { acao: { select: { programaId: true } } } },
     },
@@ -87,7 +92,14 @@ export async function validarEmenda(emendaId: string): Promise<ResultadoMotor> {
   // Parâmetros (o do exercício sobrepõe o GERAL).
   const params = await prisma.parametroValidacao.findMany({
     where: {
-      chave: { in: ["TETO_VALOR_AUTOR", "ADERENCIA_LDO"] },
+      chave: {
+        in: [
+          "TETO_VALOR_AUTOR",
+          "ADERENCIA_LDO",
+          "RESERVA_SAUDE_PERCENTUAL",
+          "FUNCAO_SAUDE",
+        ],
+      },
       OR: [{ exercicioId: emenda.exercicioId }, { escopo: "GERAL", exercicioId: null }],
     },
   });
@@ -103,6 +115,21 @@ export async function validarEmenda(emendaId: string): Promise<ResultadoMotor> {
   const modoAderenciaLDO =
     ldo?.modo === "BLOQUEANTE" ? "BLOQUEANTE" : ldo?.modo === "ALERTA" ? "ALERTA" : null;
 
+  // Reserva da saúde: pct da cota reservado à saúde (limite p/ demais áreas).
+  const reserva = pick("RESERVA_SAUDE_PERCENTUAL");
+  const reservaNum = reserva ? Number(reserva.valor) : NaN;
+  const reservaSaudePct = Number.isFinite(reservaNum) ? reservaNum : null;
+  const modoReservaSaude =
+    reservaSaudePct == null
+      ? null
+      : reserva?.modo === "BLOQUEANTE"
+        ? "BLOQUEANTE"
+        : "ALERTA";
+  const funcaoSaudeCodigo = pick("FUNCAO_SAUDE")?.valor?.trim() || "10";
+  const emendaEhSaude =
+    (emenda.dotacao as { funcao?: { codigo: string } } | null)?.funcao
+      ?.codigo === funcaoSaudeCodigo;
+
   // Soma das emendas VÁLIDAS/SUBMETIDAS do autor no exercício (exceto esta).
   const soma = await prisma.emenda.aggregate({
     _sum: { valor: true },
@@ -114,6 +141,21 @@ export async function validarEmenda(emendaId: string): Promise<ResultadoMotor> {
     },
   });
   const somaAutorExistente = soma._sum.valor ? Number(soma._sum.valor) : 0;
+
+  // Idem, apenas das emendas FORA da saúde (consomem o limite das demais áreas).
+  const somaDemais = await prisma.emenda.aggregate({
+    _sum: { valor: true },
+    where: {
+      autorId: emenda.autorId,
+      exercicioId: emenda.exercicioId,
+      status: { in: ["VALIDA", "SUBMETIDA"] },
+      id: { not: emendaId },
+      dotacao: { funcao: { codigo: { not: funcaoSaudeCodigo } } },
+    },
+  });
+  const somaAutorDemaisExistente = somaDemais._sum.valor
+    ? Number(somaDemais._sum.valor)
+    : 0;
 
   const ctx: ContextoEmenda = {
     emenda: {
@@ -135,6 +177,10 @@ export async function validarEmenda(emendaId: string): Promise<ResultadoMotor> {
     modoAderenciaLDO,
     tetoValorAutor,
     somaAutorExistente,
+    reservaSaudePct,
+    modoReservaSaude,
+    emendaEhSaude,
+    somaAutorDemaisExistente,
   };
 
   const resultado = avaliarEmenda(ctx);

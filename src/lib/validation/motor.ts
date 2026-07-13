@@ -53,6 +53,14 @@ export type ContextoEmenda = {
   modoAderenciaLDO: "BLOQUEANTE" | "ALERTA" | null;
   tetoValorAutor: number | null;
   somaAutorExistente: number;
+  // Reserva da saúde (RESERVA_SAUDE_PERCENTUAL): parcela da cota que só pode
+  // ir para a saúde. A regra é LIMITE, não obrigação — apresentar emenda é
+  // faculdade do autor; as demais áreas não podem ultrapassar
+  // teto × (1 − pct/100).
+  reservaSaudePct: number | null;
+  modoReservaSaude: "BLOQUEANTE" | "ALERTA" | null;
+  emendaEhSaude: boolean;
+  somaAutorDemaisExistente: number;
 };
 
 const STATUS_BASE_ABERTO = new Set(["EM_TRAMITACAO"]);
@@ -241,6 +249,41 @@ export function avaliarEmenda(ctx: ContextoEmenda): ResultadoMotor {
       );
     } else {
       add("TIPO_COERENTE", "Coerência do tipo", "OK", "Tipo sem exigências adicionais.");
+    }
+  }
+
+  // 10) RESERVA_SAUDE (limite das demais áreas — modo configurável).
+  // Emendas de saúde nunca falham aqui; as demais consomem o limite
+  // (cota − reserva) do autor.
+  {
+    if (ctx.reservaSaudePct == null || ctx.tetoValorAutor == null) {
+      add(
+        "RESERVA_SAUDE",
+        "Reserva da saúde (limite das demais áreas)",
+        "OK",
+        "Sem reserva de saúde configurada."
+      );
+    } else if (ctx.emendaEhSaude) {
+      add(
+        "RESERVA_SAUDE",
+        "Reserva da saúde (limite das demais áreas)",
+        "OK",
+        "Emenda destinada à saúde — não consome o limite das demais áreas."
+      );
+    } else {
+      const limiteDemais =
+        ctx.tetoValorAutor * (1 - ctx.reservaSaudePct / 100);
+      const soma = ctx.somaAutorDemaisExistente + ctx.emenda.valor;
+      const ok = soma <= limiteDemais + 0.005;
+      const modo = ctx.modoReservaSaude ?? "ALERTA";
+      add(
+        "RESERVA_SAUDE",
+        "Reserva da saúde (limite das demais áreas)",
+        ok ? "OK" : modo === "BLOQUEANTE" ? "FALHA" : "ALERTA",
+        ok
+          ? `Demais áreas acumulam ${brl(soma)} — dentro do limite de ${brl(limiteDemais)}.`
+          : `Demais áreas acumulam ${brl(soma)} — acima do limite de ${brl(limiteDemais)} (${ctx.reservaSaudePct}% da cota são reservados à saúde).`
+      );
     }
   }
 

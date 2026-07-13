@@ -56,7 +56,10 @@ export function ParametrosTab({
           Regras que o motor aplica às emendas. Parâmetros <b>bloqueantes</b>{" "}
           impedem a submissão; <b>alertas</b> apenas avisam. Chaves conhecidas:
           <code className="mx-1">TETO_VALOR_AUTOR</code>,
-          <code className="mx-1">PERCENTUAL_IMPOSITIVO</code>,
+          <code className="mx-1">RESERVA_SAUDE_PERCENTUAL</code> (% da cota só
+          p/ saúde — limite das demais áreas),
+          <code className="mx-1">FUNCAO_SAUDE</code> (código da função, padrão
+          10), <code className="mx-1">PERCENTUAL_IMPOSITIVO</code>,
           <code className="mx-1">ADERENCIA_LDO</code>.
         </p>
         <FormDialog
