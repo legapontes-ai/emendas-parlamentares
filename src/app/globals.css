@@ -7,9 +7,17 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-sans);
+  --font-sans: var(--font-inter);
   --font-mono: var(--font-geist-mono);
-  --font-heading: var(--font-sans);
+  --font-heading: var(--font-inter);
+  --font-serif: var(--font-source-serif);
+  --color-brand-navy: var(--brand-navy);
+  --color-brand-deep: var(--brand-deep);
+  --color-brand-cyan: var(--brand-cyan);
+  --color-brand-mint: var(--brand-mint);
+  --color-brand-amber: var(--brand-amber);
+  --color-brand-green: var(--brand-green);
+  --color-brand-purple: var(--brand-purple);
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -48,73 +56,83 @@
   --radius-4xl: calc(var(--radius) * 2.6);
 }
 
+/* Identidade visual "Emendas 360" (mockup Mogi Guaçu): navy institucional,
+   cyan/mint de destaque, fundo azulado claro e sidebar/topbar escuras. */
 :root {
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
-  --radius: 0.625rem;
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.205 0 0);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
+  --brand-navy: #0a2463;
+  --brand-deep: #061840;
+  --brand-cyan: #00b4d8;
+  --brand-mint: #00e5a0;
+  --brand-amber: #f5a524;
+  --brand-green: #00b278;
+  --brand-purple: #7c5cfc;
+
+  --background: #f4f7fb;
+  --foreground: #0a2463;
+  --card: #ffffff;
+  --card-foreground: #0a2463;
+  --popover: #ffffff;
+  --popover-foreground: #0a2463;
+  --primary: #0a2463;
+  --primary-foreground: #ffffff;
+  --secondary: #eff4fb;
+  --secondary-foreground: #0a2463;
+  --muted: #eff4fb;
+  --muted-foreground: #5a6b8c;
+  --accent: #e4f7fc;
+  --accent-foreground: #0779a8;
+  --destructive: #e5484d;
+  --border: #e3e9f2;
+  --input: #e3e9f2;
+  --ring: #00b4d8;
+  --chart-1: #0a2463;
+  --chart-2: #00b4d8;
+  --chart-3: #00e5a0;
+  --chart-4: #f5a524;
+  --chart-5: #7c5cfc;
+  --radius: 0.875rem;
+  --sidebar: #0a2463;
+  --sidebar-foreground: #d6e2f7;
+  --sidebar-primary: #00b4d8;
+  --sidebar-primary-foreground: #061840;
+  --sidebar-accent: rgba(255, 255, 255, 0.12);
+  --sidebar-accent-foreground: #ffffff;
+  --sidebar-border: rgba(255, 255, 255, 0.16);
+  --sidebar-ring: #00b4d8;
 }
 
 .dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.922 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.556 0 0);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.556 0 0);
+  --background: #061840;
+  --foreground: #eaf1ff;
+  --card: #0a2463;
+  --card-foreground: #eaf1ff;
+  --popover: #0a2463;
+  --popover-foreground: #eaf1ff;
+  --primary: #00b4d8;
+  --primary-foreground: #061840;
+  --secondary: #12306f;
+  --secondary-foreground: #eaf1ff;
+  --muted: #12306f;
+  --muted-foreground: #9fb4d8;
+  --accent: #12306f;
+  --accent-foreground: #8fe8ff;
+  --destructive: #e5484d;
+  --border: rgba(255, 255, 255, 0.14);
+  --input: rgba(255, 255, 255, 0.18);
+  --ring: #00b4d8;
+  --chart-1: #8fb0ff;
+  --chart-2: #00b4d8;
+  --chart-3: #00e5a0;
+  --chart-4: #f5a524;
+  --chart-5: #9d85ff;
+  --sidebar: #061840;
+  --sidebar-foreground: #d6e2f7;
+  --sidebar-primary: #00b4d8;
+  --sidebar-primary-foreground: #061840;
+  --sidebar-accent: rgba(255, 255, 255, 0.12);
+  --sidebar-accent-foreground: #ffffff;
+  --sidebar-border: rgba(255, 255, 255, 0.16);
+  --sidebar-ring: #00b4d8;
 }
 
 @layer base {
@@ -126,5 +144,53 @@
   }
   html {
     @apply font-sans;
+  }
+  h1,
+  h2,
+  h3,
+  h4 {
+    letter-spacing: -0.5px;
+    line-height: 1.2;
+  }
+}
+
+@layer components {
+  /* Gradientes da identidade */
+  .grad-main {
+    background-image: linear-gradient(135deg, #0a2463, #00b4d8);
+  }
+  .grad-hi {
+    background-image: linear-gradient(90deg, #00b4d8, #00e5a0);
+  }
+  .grad-dark {
+    background-image: linear-gradient(135deg, #061840, #0a2463);
+  }
+  /* Rótulo-antena acima de números/blocos (cards KPI) */
+  .eyebrow {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 1.8px;
+    text-transform: uppercase;
+    color: var(--brand-cyan);
+  }
+  .kpi-num {
+    font-size: 26px;
+    font-weight: 800;
+    letter-spacing: -1px;
+    line-height: 1.05;
+  }
+  .kpi-lbl {
+    font-size: 12.5px;
+    font-weight: 600;
+    color: var(--muted-foreground);
+    margin-top: 4px;
+  }
+  /* Barrinha de gradiente ao lado dos títulos de seção */
+  .sec-bar {
+    display: inline-block;
+    width: 34px;
+    height: 4px;
+    border-radius: 2px;
+    background-image: linear-gradient(90deg, #00b4d8, #00e5a0);
   }
 }

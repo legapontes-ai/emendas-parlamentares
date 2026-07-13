@@ -31,9 +31,9 @@ export function AppShell({
     <SidebarProvider>
       <AppSidebar user={{ poder: user.poder, role: user.role }} />
       <SidebarInset>
-        <header className="flex h-14 shrink-0 items-center gap-2 border-b px-4">
-          <SidebarTrigger />
-          <Separator orientation="vertical" className="mx-1 h-6" />
+        <header className="grad-dark sticky top-0 z-40 flex h-14 shrink-0 items-center gap-2 px-4 text-white shadow-[0_2px_14px_rgba(6,24,64,.35)]">
+          <SidebarTrigger className="text-white hover:bg-white/15 hover:text-white" />
+          <Separator orientation="vertical" className="mx-1 h-6 bg-white/25" />
           <ExercicioSelector exercicios={exercicios} anoAtivo={anoAtivo} />
           <div className="ml-auto">
             <PerfilSwitcher

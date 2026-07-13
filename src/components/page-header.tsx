@@ -40,9 +40,12 @@ export function PageHeader({
       ) : null}
       <div className="flex items-start justify-between gap-4">
         <div className="space-y-1">
-          <h1 className="text-2xl font-semibold tracking-tight">{titulo}</h1>
+          <div className="flex items-center gap-3">
+            <h1 className="text-2xl font-extrabold tracking-tight">{titulo}</h1>
+            <span className="sec-bar" aria-hidden />
+          </div>
           {descricao ? (
-            <p className="text-muted-foreground">{descricao}</p>
+            <p className="text-sm text-muted-foreground">{descricao}</p>
           ) : null}
         </div>
         {acao ? <div className="shrink-0">{acao}</div> : null}

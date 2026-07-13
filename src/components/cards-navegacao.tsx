@@ -28,21 +28,23 @@ export function GradeCards({ itens }: { itens: ItemCard[] }) {
             href={it.href}
             className="group rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           >
-            <Card className="h-full transition-colors group-hover:border-primary/50">
+            <Card className="h-full transition-all duration-150 group-hover:-translate-y-0.5 group-hover:shadow-[0_6px_18px_rgba(6,24,64,.12)] group-hover:ring-brand-cyan">
               <CardHeader>
                 <div className="mb-1 flex items-center gap-3">
-                  <div className="rounded-lg bg-primary/10 p-2 text-primary">
+                  <div className="grad-main rounded-lg p-2 text-white">
                     <Icon className="size-5" aria-hidden />
                   </div>
-                  <CardTitle className="text-base">{it.titulo}</CardTitle>
+                  <CardTitle className="text-base font-bold">
+                    {it.titulo}
+                  </CardTitle>
                 </div>
                 {it.descricao ? (
                   <CardDescription>{it.descricao}</CardDescription>
                 ) : null}
               </CardHeader>
               <CardContent>
-                <span className="inline-flex items-center gap-1 text-sm text-muted-foreground transition-colors group-hover:text-primary">
-                  Abrir <ArrowRight className="size-4" aria-hidden />
+                <span className="inline-flex items-center gap-1 text-xs font-bold text-brand-cyan group-hover:underline">
+                  Abrir <ArrowRight className="size-3.5" aria-hidden />
                 </span>
               </CardContent>
             </Card>

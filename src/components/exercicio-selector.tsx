@@ -25,7 +25,7 @@ export function ExercicioSelector({
 
   if (exercicios.length === 0) {
     return (
-      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+      <div className="flex items-center gap-2 text-sm text-white/70">
         <CalendarDays className="size-4" aria-hidden />
         Nenhum exercício
       </div>
@@ -34,14 +34,15 @@ export function ExercicioSelector({
 
   return (
     <div className="flex items-center gap-2">
-      <CalendarDays className="size-4 text-muted-foreground" aria-hidden />
+      <CalendarDays className="size-4 text-white/70" aria-hidden />
       <Select
         value={anoAtivo ? String(anoAtivo) : undefined}
         onValueChange={(v) => start(() => setExercicioAtivo(Number(v)))}
       >
+        {/* Estilo claro-sobre-escuro: este seletor vive na topbar navy */}
         <SelectTrigger
           size="sm"
-          className="w-[140px]"
+          className="w-[140px] border-white/20 bg-white/10 text-white hover:bg-white/20 data-placeholder:text-white/70 [&_svg:not([class*='text-'])]:text-white/70"
           aria-label="Exercício ativo"
           disabled={pending}
         >

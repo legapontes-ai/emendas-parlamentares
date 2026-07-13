@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Landmark, LayoutGrid } from "lucide-react";
+import { LayoutGrid } from "lucide-react";
 import type { Poder, Role } from "@/generated/prisma/enums";
 import {
   modulosVisiveis,
@@ -42,13 +42,24 @@ export function AppSidebar({
           <SidebarMenuItem>
             <SidebarMenuButton asChild size="lg">
               <Link href="/hub">
-                <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-                  <Landmark className="size-4" aria-hidden />
-                </div>
+                {/* Marca Emendas360: três barras cyan→mint sobre navy */}
+                <svg
+                  viewBox="0 0 48 48"
+                  className="size-8 shrink-0"
+                  aria-hidden
+                >
+                  <rect width="48" height="48" rx="12" fill="rgba(255,255,255,.08)" />
+                  <rect x="9.5" y="27" width="8" height="12" rx="2.2" fill="#00B4D8" />
+                  <rect x="20" y="19.5" width="8" height="19.5" rx="2.2" fill="#00CFC2" />
+                  <rect x="30.5" y="10" width="8" height="29" rx="2.2" fill="#00E5A0" />
+                </svg>
                 <div className="flex flex-col gap-0.5 leading-none">
-                  <span className="font-semibold">Emendas</span>
-                  <span className="text-xs text-muted-foreground">
-                    Parlamentares
+                  <span className="text-base font-extrabold tracking-tight">
+                    <span className="text-brand-cyan">Emendas</span>
+                    <span className="text-brand-mint">360</span>
+                  </span>
+                  <span className="text-[9px] font-medium uppercase tracking-[2px] text-[#9FB4D8]">
+                    Orçamento impositivo
                   </span>
                 </div>
               </Link>

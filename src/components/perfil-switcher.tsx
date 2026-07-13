@@ -53,12 +53,21 @@ export function PerfilSwitcher({
 
   return (
     <div className="flex items-center gap-2">
-      <Badge variant="outline" className="hidden gap-1 sm:inline-flex">
+      {/* Estilo claro-sobre-escuro: o switcher vive na topbar navy */}
+      <Badge
+        variant="outline"
+        className="hidden gap-1 border-white/25 bg-white/10 text-white sm:inline-flex"
+      >
         {poder ?? "Transversal"}
       </Badge>
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <Button variant="outline" size="sm" className="gap-2" disabled={pending}>
+          <Button
+            variant="outline"
+            size="sm"
+            className="gap-2 border-white/20 bg-white/10 text-white hover:bg-white/20 hover:text-white"
+            disabled={pending}
+          >
             <UserCog className="size-4" aria-hidden />
             <span className="hidden max-w-[180px] truncate sm:inline">
               {nome}
