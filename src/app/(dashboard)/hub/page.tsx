@@ -17,8 +17,8 @@ export default async function HubPage({
   return (
     <div className="mx-auto max-w-5xl">
       <PageHeader
-        titulo={`Olá, ${user.nome}`}
-        descricao="Selecione um módulo para começar."
+        titulo="Ferramentas"
+        descricao={`Olá, ${user.nome} — módulos operacionais do seu perfil (formulários, importação, configurações).`}
       />
 
       {erro === "acesso-negado" ? (

@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 
-// Sem autenticação real ainda (PROMPT 9): a raiz leva ao hub.
+// A raiz leva ao painel (o painel redireciona o gabinete p/ o Vereador 360).
 export default function Home() {
-  redirect("/hub");
+  redirect("/painel");
 }

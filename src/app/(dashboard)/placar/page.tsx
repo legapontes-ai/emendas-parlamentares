@@ -1,0 +1,139 @@
+import { getAnoAtivo } from "@/lib/exercicio";
+import { getDados360, brl, brlCompacto } from "@/lib/queries-360";
+import { ROTULO_TIPO_EMENDA } from "@/lib/rotulos";
+import { SecTitle } from "@/components/e360/sec-title";
+import { KpiCard } from "@/components/e360/kpi-card";
+import { Card360, CardSrc, Eyebrow } from "@/components/e360/card360";
+import { MiniBar } from "@/components/e360/minibar";
+import { PrintButton } from "@/components/emendas/print-button";
+
+export default async function PlacarPage() {
+  const ano = await getAnoAtivo();
+  const {
+    params,
+    consolidado: c,
+    porAutor,
+    porDestino,
+    porTipo,
+  } = await getDados360(ano);
+
+  const pctSaude = c.valor > 0 ? Math.round((c.valorSaude / c.valor) * 100) : 0;
+
+  return (
+    <div>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <SecTitle
+          titulo={`Resumo Consolidado — exercício ${ano ?? "—"}`}
+          nota="o quadro que a comissão apresenta à Mesa e à população · valores reais do banco"
+        />
+        <div className="mt-7">
+          <PrintButton />
+        </div>
+      </div>
+
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <KpiCard
+          variante="hi"
+          eyebrow="Teto global"
+          numero={c.tetoGlobal != null ? brlCompacto(c.tetoGlobal) : "—"}
+          rotulo={
+            c.tetoGlobal != null
+              ? `cota de ${brlCompacto(params.cotaPorAutor!)} × ${c.totalAutores} autores`
+              : "defina TETO_VALOR_AUTOR"
+          }
+        />
+        <KpiCard
+          eyebrow="Emendas"
+          numero={String(c.qtd)}
+          rotulo={`${c.autoresComEmenda} autores · ${brlCompacto(c.valor)}`}
+        />
+        <KpiCard
+          eyebrow="Saúde"
+          numero={brlCompacto(c.valorSaude)}
+          rotulo={`${c.qtdSaude} itens · ${pctSaude}% do total`}
+          delta={
+            c.pisoSaudeGlobal != null
+              ? c.valorSaude >= c.pisoSaudeGlobal
+                ? { tom: "up", texto: "piso cumprido" }
+                : { tom: "warn", texto: "piso a conferir" }
+              : undefined
+          }
+        />
+        <KpiCard
+          eyebrow="Demais áreas"
+          numero={brlCompacto(c.valorDemais)}
+          rotulo={`${c.qtdDemais} itens`}
+        />
+      </div>
+
+      <SecTitle
+        titulo="Como o recurso se distribui"
+        nota="por tipo de emenda, por destino e entre os autores"
+      />
+      <div className="grid gap-4 lg:grid-cols-2">
+        <Card360>
+          <Eyebrow>Por tipo de emenda</Eyebrow>
+          {porTipo.map((t) => (
+            <MiniBar
+              key={t.status}
+              rotulo={ROTULO_TIPO_EMENDA[t.status] ?? t.status}
+              pct={c.valor > 0 ? (t.valor / c.valor) * 100 : 0}
+              valor={`${brl(t.valor)} · ${t.qtd} itens`}
+            />
+          ))}
+          <CardSrc>classificação pelo tipo registrado na emenda</CardSrc>
+        </Card360>
+        <Card360>
+          <Eyebrow>Maiores destinos por valor</Eyebrow>
+          {porDestino.slice(0, 7).map((d) => (
+            <MiniBar
+              key={d.nome}
+              rotulo={d.nome}
+              larguraRotulo={210}
+              pct={porDestino[0]?.valor > 0 ? (d.valor / porDestino[0].valor) * 100 : 0}
+              valor={brl(d.valor)}
+            />
+          ))}
+          <CardSrc>agregado dos {c.qtd} itens por órgão da dotação</CardSrc>
+        </Card360>
+      </div>
+
+      <Card360 className="mt-4">
+        <Eyebrow>
+          Cota × reserva de saúde por autor
+          {params.cotaPorAutor != null
+            ? ` — cada barra = ${brl(params.cotaPorAutor)}`
+            : ""}
+        </Eyebrow>
+        {porAutor.map((a) => {
+          const base = params.cotaPorAutor ?? Math.max(a.valorTotal, 1);
+          return (
+            <MiniBar
+              key={a.autorId}
+              rotulo={a.nome}
+              pct={(a.valorSaude / base) * 100}
+              valor={`Saúde ${brl(a.valorSaude)} · total ${brl(a.valorTotal)}`}
+              marcaPct={
+                c.pisoSaudeAutor != null && params.cotaPorAutor != null
+                  ? (c.pisoSaudeAutor / params.cotaPorAutor) * 100
+                  : undefined
+              }
+              abaixoDaMarca={
+                c.pisoSaudeAutor != null && a.valorSaude < c.pisoSaudeAutor - 0.5
+              }
+            />
+          );
+        })}
+        <CardSrc
+          direita={
+            c.pisoSaudeAutor != null
+              ? `marca ▎= piso de saúde (${brl(c.pisoSaudeAutor)})`
+              : undefined
+          }
+        >
+          porção colorida = valor em saúde do autor
+        </CardSrc>
+      </Card360>
+    </div>
+  );
+}

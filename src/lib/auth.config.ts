@@ -13,7 +13,13 @@ export const authConfig = {
       // Fora de produção não bloqueia (dev usa a sessão-cookie temporária).
       if (process.env.NODE_ENV !== "production") return true;
       const { pathname } = request.nextUrl;
-      if (pathname === "/login" || pathname.startsWith("/api/auth")) return true;
+      // /publica é a visão do cidadão: agregados sem login (transparência).
+      if (
+        pathname === "/login" ||
+        pathname === "/publica" ||
+        pathname.startsWith("/api/auth")
+      )
+        return true;
       return !!auth?.user;
     },
     jwt({ token, user }) {

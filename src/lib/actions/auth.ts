@@ -13,7 +13,7 @@ export async function entrar(
     await signIn("credentials", {
       email: formData.get("email"),
       senha: formData.get("senha"),
-      redirectTo: "/hub",
+      redirectTo: "/painel",
     });
     return null;
   } catch (e) {
