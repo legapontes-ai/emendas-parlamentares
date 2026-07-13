@@ -2,21 +2,21 @@ import type { CSSProperties } from "react";
 import { cn } from "@/lib/utils";
 
 // Barra horizontal do mockup: rótulo + barra com preenchimento em gradiente
-// (ou âmbar quando abaixo da marca) + valor à direita. `marcaPct` desenha o
-// tique vertical do piso/limite.
+// (ou âmbar quando `alerta`) + valor à direita. `marcaPct` desenha o tique
+// vertical do limite/reserva.
 export function MiniBar({
   rotulo,
   pct,
   valor,
   marcaPct,
-  abaixoDaMarca,
+  alerta,
   larguraRotulo = 230,
 }: {
   rotulo: string;
   pct: number;
   valor: string;
   marcaPct?: number;
-  abaixoDaMarca?: boolean;
+  alerta?: boolean;
   larguraRotulo?: number;
 }) {
   return (
@@ -29,7 +29,7 @@ export function MiniBar({
       </span>
       <div className="relative h-2.5 min-w-24 flex-1 overflow-hidden rounded-md bg-secondary">
         <i
-          className={cn("block h-full", abaixoDaMarca ? "bg-brand-amber" : "grad-hi")}
+          className={cn("block h-full", alerta ? "bg-brand-amber" : "grad-hi")}
           style={{ width: `${Math.min(100, Math.max(0, pct))}%` }}
         />
         {marcaPct != null ? (

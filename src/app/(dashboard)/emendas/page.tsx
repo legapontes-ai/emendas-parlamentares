@@ -41,8 +41,9 @@ export default async function EmendasVistaPage({
 
   const pctSaude = c.valor > 0 ? Math.round((c.valorSaude / c.valor) * 100) : 0;
   const invalidas = porStatus.find((s) => s.status === "INVALIDA");
-  const saudeAbaixo =
-    c.pisoSaudeGlobal != null && c.valorSaude < c.pisoSaudeGlobal;
+  // Reserva = limite: demais áreas não podem ultrapassar (teto − reserva).
+  const reservaInvadida =
+    c.limiteDemaisGlobal != null && c.valorDemais > c.limiteDemaisGlobal + 0.5;
 
   return (
     <div>
@@ -86,16 +87,25 @@ export default async function EmendasVistaPage({
               rotulo={`${c.qtdSaude} itens · ${pctSaude}% do total`}
               delta={
                 c.pisoSaudeGlobal != null
-                  ? saudeAbaixo
-                    ? { tom: "warn", texto: "abaixo do piso" }
-                    : { tom: "up", texto: "piso cumprido" }
+                  ? { tom: "neutral", texto: `reserva: ${brlCompacto(c.pisoSaudeGlobal)}` }
                   : undefined
               }
             />
             <KpiCard
               eyebrow="Demais áreas"
               numero={brlCompacto(c.valorDemais)}
-              rotulo={`${c.qtdDemais} itens · ${100 - pctSaude}% do total`}
+              rotulo={
+                c.limiteDemaisGlobal != null
+                  ? `${c.qtdDemais} itens · limite ${brlCompacto(c.limiteDemaisGlobal)}`
+                  : `${c.qtdDemais} itens · ${100 - pctSaude}% do total`
+              }
+              delta={
+                c.limiteDemaisGlobal != null
+                  ? reservaInvadida
+                    ? { tom: "warn", texto: "acima do limite" }
+                    : { tom: "up", texto: "dentro do limite" }
+                  : undefined
+              }
             />
           </div>
 
@@ -218,12 +228,12 @@ export default async function EmendasVistaPage({
 
       {aba === "conformidade" ? (
         <>
-          {invalidas || saudeAbaixo ? (
+          {invalidas || reservaInvadida ? (
             <Banner tom="warn" emoji="🧾" href="/analise">
               <b>
                 {[
                   invalidas ? `${invalidas.qtd} emenda(s) inválida(s) para saneamento` : null,
-                  saudeAbaixo ? "reserva de saúde abaixo do piso" : null,
+                  reservaInvadida ? "reserva da saúde invadida pelas demais áreas" : null,
                 ]
                   .filter(Boolean)
                   .join(" · ")}
@@ -255,11 +265,11 @@ export default async function EmendasVistaPage({
                           texto: `soma ${brlCompacto(c.valor)} · teto ${brlCompacto(c.tetoGlobal)}`,
                         } as FarolItemDado)
                       : null,
-                    c.pisoSaudeGlobal != null
+                    c.limiteDemaisGlobal != null
                       ? ({
-                          tom: saudeAbaixo ? "a" : "g",
-                          titulo: "Reserva de saúde",
-                          texto: `${brlCompacto(c.valorSaude)} × piso ${brlCompacto(c.pisoSaudeGlobal)}`,
+                          tom: reservaInvadida ? "a" : "g",
+                          titulo: "Reserva da saúde (limite das demais áreas)",
+                          texto: `demais áreas ${brlCompacto(c.valorDemais)} × limite ${brlCompacto(c.limiteDemaisGlobal)} · usar a cota é faculdade, o limite é que vincula`,
                         } as FarolItemDado)
                       : null,
                     ...porStatus
@@ -286,8 +296,9 @@ export default async function EmendasVistaPage({
                 Pontos de atenção para o parecer
               </Eyebrow>
               <p className="text-[13px] leading-7">
-                • <b>Reserva de saúde</b>: conferir a função da dotação (função{" "}
-                {params.funcaoSaudeCodigo} = Saúde) antes da consolidação.
+                • <b>Reserva de saúde</b>: a parcela reservada só pode ir para
+                dotações da função {params.funcaoSaudeCodigo} (Saúde) — conferir
+                a classificação antes da consolidação.
                 <br />• <b>Concentração</b>:{" "}
                 {porDestino
                   .slice(0, 3)

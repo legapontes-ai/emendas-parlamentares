@@ -49,36 +49,40 @@ export default async function PainelPage() {
     );
   }
 
-  const saudeAbaixo =
-    c.pisoSaudeGlobal != null && c.valorSaude < c.pisoSaudeGlobal;
+  // Regra da reserva: apresentar emenda é faculdade do autor — o que não pode
+  // é ULTRAPASSAR limites. Demais áreas ficam limitadas a (cota − reserva);
+  // a parcela reservada só pode ir para a saúde.
+  const reservaInvadidaGlobal =
+    c.limiteDemaisGlobal != null && c.valorDemais > c.limiteDemaisGlobal + 0.5;
   const invalidas = porStatus.find((s) => s.status === "INVALIDA");
   const submetidas = porStatus.find((s) => s.status === "SUBMETIDA");
   const acimaDaCota =
     params.cotaPorAutor != null
       ? porAutor.filter((a) => a.valorTotal > params.cotaPorAutor! + 0.5)
       : [];
-  const abaixoPisoSaude =
-    c.pisoSaudeAutor != null
-      ? porAutor.filter((a) => a.valorSaude < c.pisoSaudeAutor! - 0.5)
+  const invadiramReserva =
+    c.limiteDemaisAutor != null
+      ? porAutor.filter((a) => a.valorDemais > c.limiteDemaisAutor! + 0.5)
       : [];
 
   const farol: FarolItemDado[] = [];
-  if (saudeAbaixo) {
+  if (reservaInvadidaGlobal) {
     farol.push({
       tom: "a",
-      titulo: "Reserva de saúde consolidada abaixo do piso",
-      texto: `${brlCompacto(c.valorSaude)} × piso ${brlCompacto(c.pisoSaudeGlobal!)} (${params.reservaSaudePct}% do teto).`,
-      fix: "O que fazer: conferir a classificação por função das emendas de saúde.",
+      titulo: "Reserva da saúde invadida — demais áreas acima do limite",
+      texto: `demais áreas somam ${brlCompacto(c.valorDemais)} × limite ${brlCompacto(c.limiteDemaisGlobal!)} (reserva de ${params.reservaSaudePct}% só pode ir p/ saúde).`,
+      fix: "O que fazer: reclassificar ou reduzir emendas de outras áreas.",
       href: "/emendas?aba=conformidade",
     });
   }
-  if (abaixoPisoSaude.length > 0) {
+  if (invadiramReserva.length > 0) {
     farol.push({
       tom: "a",
-      titulo: `Reserva de saúde individual: ${abaixoPisoSaude.length} autor(es) abaixo do piso`,
-      texto: abaixoPisoSaude.map((a) => a.nome).slice(0, 4).join(", ") +
-        (abaixoPisoSaude.length > 4 ? "…" : ""),
-      fix: `Piso por autor: ${brl(c.pisoSaudeAutor!)}.`,
+      titulo: `${invadiramReserva.length} autor(es) usando a reserva da saúde em outras áreas`,
+      texto:
+        invadiramReserva.map((a) => a.nome).slice(0, 4).join(", ") +
+        (invadiramReserva.length > 4 ? "…" : ""),
+      fix: `Limite p/ demais áreas por autor: ${brl(c.limiteDemaisAutor!)}.`,
       href: "/emendas",
     });
   }
@@ -135,11 +139,11 @@ export default async function PainelPage() {
           }
     );
   }
-  if (!saudeAbaixo && c.pisoSaudeGlobal != null) {
+  if (!reservaInvadidaGlobal && c.pisoSaudeGlobal != null) {
     farol.push({
       tom: "g",
-      titulo: "Reserva de saúde cumprida",
-      texto: `Saúde ${brlCompacto(c.valorSaude)} ≥ piso ${brlCompacto(c.pisoSaudeGlobal)}.`,
+      titulo: "Reserva da saúde preservada",
+      texto: `demais áreas ${brlCompacto(c.valorDemais)} ≤ limite ${brlCompacto(c.limiteDemaisGlobal!)} · ${brlCompacto(c.pisoSaudeGlobal)} seguem reservados à saúde.`,
       href: "/placar",
     });
   }
@@ -149,7 +153,7 @@ export default async function PainelPage() {
 
   return (
     <div>
-      {saudeAbaixo ? (
+      {reservaInvadidaGlobal ? (
         <Banner
           tom="warn"
           emoji="⚠️"
@@ -157,10 +161,11 @@ export default async function PainelPage() {
           tag={<Tag360 tom="warn">conferir classificação</Tag360>}
         >
           <b>
-            Reserva da saúde {brlCompacto(c.pisoSaudeGlobal! - c.valorSaude)}{" "}
-            abaixo do piso ({params.reservaSaudePct}%)
+            Reserva da saúde invadida em{" "}
+            {brlCompacto(c.valorDemais - c.limiteDemaisGlobal!)}
           </b>{" "}
-          · conferir a classificação por função · <u>ver e conferir →</u>
+          · demais áreas acima do limite de {brlCompacto(c.limiteDemaisGlobal!)}{" "}
+          · <u>ver e conferir →</u>
         </Banner>
       ) : null}
       <Banner
@@ -250,17 +255,19 @@ export default async function PainelPage() {
         />
         <KpiCard
           eyebrow="Reserva da saúde"
-          numero={`${pctSaude}%`}
+          numero={
+            c.pisoSaudeGlobal != null ? brlCompacto(c.pisoSaudeGlobal) : `${pctSaude}%`
+          }
           rotulo={
             c.pisoSaudeGlobal != null
-              ? `${brlCompacto(c.valorSaude)} · piso ${params.reservaSaudePct}% (${brlCompacto(c.pisoSaudeGlobal)})`
+              ? `${params.reservaSaudePct}% do teto só p/ saúde · em saúde: ${brlCompacto(c.valorSaude)}`
               : `${brlCompacto(c.valorSaude)} em saúde (função ${params.funcaoSaudeCodigo})`
           }
           delta={
-            c.pisoSaudeGlobal != null
-              ? saudeAbaixo
-                ? { tom: "warn", texto: "abaixo do piso" }
-                : { tom: "up", texto: "piso cumprido" }
+            c.limiteDemaisGlobal != null
+              ? reservaInvadidaGlobal
+                ? { tom: "warn", texto: "reserva invadida" }
+                : { tom: "up", texto: "reserva preservada" }
               : undefined
           }
           href="/emendas?aba=conformidade"
@@ -372,7 +379,6 @@ export default async function PainelPage() {
                 ? (c.pisoSaudeGlobal / c.tetoGlobal) * 100
                 : undefined
             }
-            abaixoDaMarca={saudeAbaixo}
           />
           <MiniBar
             rotulo="Demais áreas"
@@ -380,13 +386,22 @@ export default async function PainelPage() {
               c.tetoGlobal ? (c.valorDemais / c.tetoGlobal) * 100 : 100 - pctSaude
             }
             valor={`${brl(c.valorDemais)} · ${c.qtdDemais} itens`}
+            marcaPct={
+              c.tetoGlobal && c.limiteDemaisGlobal != null
+                ? (c.limiteDemaisGlobal / c.tetoGlobal) * 100
+                : undefined
+            }
+            alerta={reservaInvadidaGlobal}
           />
           <CardSrc
             direita={
-              c.pisoSaudeGlobal != null ? "marca ▎= piso da saúde" : undefined
+              c.pisoSaudeGlobal != null
+                ? "marca ▎= reserva da saúde / limite das demais áreas"
+                : undefined
             }
           >
-            área derivada da função da dotação de cada emenda
+            área derivada da função da dotação · usar a cota é faculdade; o
+            limite é que não pode ser ultrapassado
           </CardSrc>
         </Card360>
 
@@ -438,8 +453,9 @@ export default async function PainelPage() {
             </thead>
             <tbody>
               {porAutor.map((a) => {
-                const saudeOk =
-                  c.pisoSaudeAutor == null || a.valorSaude >= c.pisoSaudeAutor - 0.5;
+                const reservaOk =
+                  c.limiteDemaisAutor == null ||
+                  a.valorDemais <= c.limiteDemaisAutor + 0.5;
                 const cotaOk =
                   params.cotaPorAutor == null ||
                   a.valorTotal <= params.cotaPorAutor + 0.5;
@@ -466,8 +482,8 @@ export default async function PainelPage() {
                     <td className="border-b border-border px-2.5 py-2">
                       {!cotaOk ? (
                         <Tag360 tom="bad">acima da cota</Tag360>
-                      ) : !saudeOk ? (
-                        <Tag360 tom="warn">saúde abaixo do piso</Tag360>
+                      ) : !reservaOk ? (
+                        <Tag360 tom="warn">reserva da saúde invadida</Tag360>
                       ) : (
                         <Tag360 tom="ok">conforme</Tag360>
                       )}
@@ -480,8 +496,8 @@ export default async function PainelPage() {
         </div>
         <CardSrc
           direita={
-            c.pisoSaudeAutor != null
-              ? `reserva mínima de saúde por autor: ${brl(c.pisoSaudeAutor)}`
+            c.limiteDemaisAutor != null
+              ? `limite p/ demais áreas por autor: ${brl(c.limiteDemaisAutor)} (reserva de ${brl(c.pisoSaudeAutor!)} só p/ saúde)`
               : undefined
           }
         >

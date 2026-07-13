@@ -55,8 +55,11 @@ export default async function Vereador360Page({
   const cotaOk =
     params.cotaPorAutor == null ||
     (resumo?.valorTotal ?? 0) <= params.cotaPorAutor + 0.5;
-  const saudeOk =
-    c.pisoSaudeAutor == null || (resumo?.valorSaude ?? 0) >= c.pisoSaudeAutor - 0.5;
+  // Apresentar emenda é faculdade — a regra é limite: demais áreas até
+  // (cota − reserva); a parcela reservada só pode ir para a saúde.
+  const reservaOk =
+    c.limiteDemaisAutor == null ||
+    (resumo?.valorDemais ?? 0) <= c.limiteDemaisAutor + 0.5;
 
   const farol: FarolItemDado[] = [
     params.cotaPorAutor != null
@@ -70,11 +73,13 @@ export default async function Vereador360Page({
           titulo: "Cota não configurada",
           texto: "defina o parâmetro TETO_VALOR_AUTOR nas Configurações",
         },
-    c.pisoSaudeAutor != null
+    c.limiteDemaisAutor != null
       ? {
-          tom: saudeOk ? "g" : "a",
-          titulo: "Reserva de saúde",
-          texto: `${brl(resumo?.valorSaude ?? 0)}${saudeOk ? " — cumpre o piso de " : " — abaixo do piso de "}${brl(c.pisoSaudeAutor)}`,
+          tom: reservaOk ? "g" : "a",
+          titulo: reservaOk
+            ? "Reserva da saúde preservada"
+            : "Reserva da saúde invadida",
+          texto: `demais áreas ${brl(resumo?.valorDemais ?? 0)} · limite ${brl(c.limiteDemaisAutor)} — ${brl(c.pisoSaudeAutor!)} da cota só podem ir p/ saúde`,
         }
       : {
           tom: "g" as const,
@@ -150,16 +155,28 @@ export default async function Vereador360Page({
           rotulo={`${resumo?.itensSaude ?? 0} item(ns) · função ${params.funcaoSaudeCodigo}`}
           delta={
             c.pisoSaudeAutor != null
-              ? saudeOk
-                ? { tom: "up", texto: "cumpre o piso" }
-                : { tom: "warn", texto: "abaixo do piso" }
+              ? {
+                  tom: "neutral",
+                  texto: `reserva: ${brlCompacto(c.pisoSaudeAutor)} só p/ saúde`,
+                }
               : undefined
           }
         />
         <KpiCard
           eyebrow="Demais áreas"
           numero={brlCompacto(resumo?.valorDemais ?? 0)}
-          rotulo={`${(resumo?.itens ?? 0) - (resumo?.itensSaude ?? 0)} item(ns)`}
+          rotulo={
+            c.limiteDemaisAutor != null
+              ? `${(resumo?.itens ?? 0) - (resumo?.itensSaude ?? 0)} item(ns) · limite ${brlCompacto(c.limiteDemaisAutor)}`
+              : `${(resumo?.itens ?? 0) - (resumo?.itensSaude ?? 0)} item(ns)`
+          }
+          delta={
+            c.limiteDemaisAutor != null
+              ? reservaOk
+                ? { tom: "up", texto: "dentro do limite" }
+                : { tom: "warn", texto: "acima do limite" }
+              : undefined
+          }
         />
       </div>
 

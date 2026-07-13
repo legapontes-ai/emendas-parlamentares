@@ -52,10 +52,10 @@ export default async function PlacarPage() {
           numero={brlCompacto(c.valorSaude)}
           rotulo={`${c.qtdSaude} itens · ${pctSaude}% do total`}
           delta={
-            c.pisoSaudeGlobal != null
-              ? c.valorSaude >= c.pisoSaudeGlobal
-                ? { tom: "up", texto: "piso cumprido" }
-                : { tom: "warn", texto: "piso a conferir" }
+            c.limiteDemaisGlobal != null
+              ? c.valorDemais <= c.limiteDemaisGlobal + 0.5
+                ? { tom: "up", texto: "reserva preservada" }
+                : { tom: "warn", texto: "reserva invadida" }
               : undefined
           }
         />
@@ -118,8 +118,9 @@ export default async function PlacarPage() {
                   ? (c.pisoSaudeAutor / params.cotaPorAutor) * 100
                   : undefined
               }
-              abaixoDaMarca={
-                c.pisoSaudeAutor != null && a.valorSaude < c.pisoSaudeAutor - 0.5
+              alerta={
+                c.limiteDemaisAutor != null &&
+                a.valorDemais > c.limiteDemaisAutor + 0.5
               }
             />
           );
@@ -127,11 +128,11 @@ export default async function PlacarPage() {
         <CardSrc
           direita={
             c.pisoSaudeAutor != null
-              ? `marca ▎= piso de saúde (${brl(c.pisoSaudeAutor)})`
+              ? `marca ▎= reserva da saúde (${brl(c.pisoSaudeAutor)}) · âmbar = demais áreas acima do limite`
               : undefined
           }
         >
-          porção colorida = valor em saúde do autor
+          porção colorida = valor em saúde do autor · usar a cota é faculdade
         </CardSrc>
       </Card360>
     </div>

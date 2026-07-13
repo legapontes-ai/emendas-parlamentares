@@ -26,8 +26,9 @@ export default async function AnalisePage() {
   const validas = emendas.filter((e) => e.status === "VALIDA");
   const decididas = qtd("APROVADA") + qtd("REJEITADA");
 
-  const saudeAbaixo =
-    c.pisoSaudeGlobal != null && c.valorSaude < c.pisoSaudeGlobal;
+  // Reserva = limite: demais áreas não podem ultrapassar (teto − reserva).
+  const reservaInvadida =
+    c.limiteDemaisGlobal != null && c.valorDemais > c.limiteDemaisGlobal + 0.5;
 
   // Fila de trabalho: primeiro o que precisa de gente, depois o que está pronto.
   const fila = [...submetidas, ...invalidas, ...validas];
@@ -153,19 +154,23 @@ export default async function AnalisePage() {
             ) : null}
             {c.pisoSaudeGlobal != null ? (
               <p>
-                <b>Reserva de saúde:</b> {brl(c.valorSaude)} destinados à saúde
-                — {saudeAbaixo ? "ABAIXO" : "acima"} do piso de{" "}
-                {brl(c.pisoSaudeGlobal)} ({params.reservaSaudePct}%).
+                <b>Reserva de saúde:</b> {brl(c.pisoSaudeGlobal)} (
+                {params.reservaSaudePct}%) reservados exclusivamente à saúde. As
+                demais áreas somam {brl(c.valorDemais)},{" "}
+                {reservaInvadida ? "ACIMA" : "dentro"} do limite de{" "}
+                {brl(c.limiteDemaisGlobal!)}. Em saúde: {brl(c.valorSaude)}.
               </p>
             ) : null}
             <p>
               <b>Ressalvas:</b>{" "}
-              {invalidas.length > 0 || saudeAbaixo
+              {invalidas.length > 0 || reservaInvadida
                 ? [
                     invalidas.length > 0
                       ? `${invalidas.length} emenda(s) inválida(s) devolvida(s) para saneamento`
                       : null,
-                    saudeAbaixo ? "reserva de saúde abaixo do piso" : null,
+                    reservaInvadida
+                      ? "demais áreas acima do limite (reserva da saúde invadida)"
+                      : null,
                   ]
                     .filter(Boolean)
                     .join("; ") + "."

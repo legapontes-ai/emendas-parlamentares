@@ -238,8 +238,13 @@ export type Consolidado360 = {
   qtdDemais: number;
   valorDemais: number;
   tetoGlobal: number | null;
+  // Reserva da saúde: parcela da cota/teto que SÓ pode ir para a saúde.
+  // Apresentar emenda é faculdade — a regra é limite, não obrigação: as
+  // demais áreas não podem ultrapassar (cota − reserva).
   pisoSaudeGlobal: number | null;
   pisoSaudeAutor: number | null;
+  limiteDemaisGlobal: number | null;
+  limiteDemaisAutor: number | null;
   totalAutores: number;
   autoresComEmenda: number;
 };
@@ -267,6 +272,10 @@ export function consolidar(
     p.cotaPorAutor != null && p.reservaSaudePct != null
       ? (p.cotaPorAutor * p.reservaSaudePct) / 100
       : null;
+  const pisoSaudeGlobal =
+    tetoGlobal != null && p.reservaSaudePct != null
+      ? (tetoGlobal * p.reservaSaudePct) / 100
+      : null;
   return {
     qtd: emendas.length,
     valor,
@@ -275,11 +284,16 @@ export function consolidar(
     qtdDemais: emendas.length - qtdSaude,
     valorDemais: valor - valorSaude,
     tetoGlobal,
-    pisoSaudeGlobal:
-      tetoGlobal != null && p.reservaSaudePct != null
-        ? (tetoGlobal * p.reservaSaudePct) / 100
-        : null,
+    pisoSaudeGlobal,
     pisoSaudeAutor,
+    limiteDemaisGlobal:
+      tetoGlobal != null && pisoSaudeGlobal != null
+        ? tetoGlobal - pisoSaudeGlobal
+        : null,
+    limiteDemaisAutor:
+      p.cotaPorAutor != null && pisoSaudeAutor != null
+        ? p.cotaPorAutor - pisoSaudeAutor
+        : null,
     totalAutores,
     autoresComEmenda: autores.size,
   };

@@ -28,14 +28,14 @@ export default async function AssistentePage() {
       fonte: "parâmetros de validação",
     },
     {
-      pergunta: "A reserva da saúde está sendo cumprida?",
+      pergunta: "A reserva da saúde está sendo respeitada?",
       resposta:
-        c.pisoSaudeGlobal != null
-          ? c.valorSaude >= c.pisoSaudeGlobal
-            ? `Sim: a Saúde soma <b>${brl(c.valorSaude)}</b> (${c.qtdSaude} itens), acima do piso de <b>${brl(c.pisoSaudeGlobal)}</b>.`
-            : `Ainda não: a Saúde soma <b>${brl(c.valorSaude)}</b>, <b>${brl(c.pisoSaudeGlobal - c.valorSaude)} abaixo</b> do piso de ${brl(c.pisoSaudeGlobal)}. Confira a classificação por função das emendas de saúde.`
-          : `Há <b>${brl(c.valorSaude)}</b> em Saúde (função ${params.funcaoSaudeCodigo}), ${c.qtdSaude} itens. Para checar o piso, defina o parâmetro RESERVA_SAUDE_PERCENTUAL.`,
-      fonte: "emendas × função da dotação",
+        c.limiteDemaisGlobal != null
+          ? c.valorDemais <= c.limiteDemaisGlobal + 0.5
+            ? `Sim: apresentar emenda é faculdade — a regra é o limite, e ele está respeitado. As demais áreas somam <b>${brl(c.valorDemais)}</b>, dentro do limite de <b>${brl(c.limiteDemaisGlobal)}</b>; os <b>${brl(c.pisoSaudeGlobal!)}</b> da reserva seguem disponíveis só para a saúde (em saúde até agora: ${brl(c.valorSaude)}).`
+            : `Não: as demais áreas somam <b>${brl(c.valorDemais)}</b>, <b>${brl(c.valorDemais - c.limiteDemaisGlobal)} acima</b> do limite de ${brl(c.limiteDemaisGlobal)} — a reserva da saúde está sendo usada em outras áreas. Reclassificar ou reduzir emendas de outras áreas.`
+          : `Há <b>${brl(c.valorSaude)}</b> em Saúde (função ${params.funcaoSaudeCodigo}), ${c.qtdSaude} itens. Para ativar a checagem da reserva, defina o parâmetro RESERVA_SAUDE_PERCENTUAL.`,
+      fonte: "emendas × função da dotação · reserva como limite",
     },
     {
       pergunta: "Quais os maiores destinos?",
