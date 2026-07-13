@@ -197,6 +197,7 @@ export async function semear(prisma: PrismaClient) {
     { chave: "TETO_VALOR_AUTOR", valor: "500000", modo: "BLOQUEANTE" },
     { chave: "PERCENTUAL_IMPOSITIVO", valor: "1.5", modo: "ALERTA" },
     { chave: "ADERENCIA_LDO", valor: "true", modo: "ALERTA" },
+    { chave: "RESERVA_SAUDE_PERCENTUAL", valor: "50", modo: "ALERTA" },
   ];
   for (const p of params) {
     const existente = await prisma.parametroValidacao.findFirst({ where: { exercicioId: null, chave: p.chave } });
