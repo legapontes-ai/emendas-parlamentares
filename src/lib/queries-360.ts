@@ -21,6 +21,9 @@ export type Parametros360 = {
   rcl: number | null;
   percentualImpositivo: number | null;
   funcaoSaudeCodigo: string;
+  // Nº de parlamentares do exercício (param NUMERO_AUTORES). Quando ausente,
+  // cai na contagem de Autor cadastrados — que pode incluir contas demo.
+  numeroAutores: number | null;
 };
 
 export type Emenda360 = {
@@ -69,6 +72,7 @@ export async function getParametros360(ano: number | null): Promise<Parametros36
     "RCL",
     "PERCENTUAL_IMPOSITIVO",
     "FUNCAO_SAUDE",
+    "NUMERO_AUTORES",
   ];
   const rows = await safe(
     () =>
@@ -95,6 +99,7 @@ export async function getParametros360(ano: number | null): Promise<Parametros36
     rcl: num(pick("RCL")?.valor),
     percentualImpositivo: num(pick("PERCENTUAL_IMPOSITIVO")?.valor),
     funcaoSaudeCodigo: pick("FUNCAO_SAUDE")?.valor?.trim() || "10",
+    numeroAutores: num(pick("NUMERO_AUTORES")?.valor),
   };
 }
 
@@ -301,11 +306,15 @@ export function consolidar(
 
 // Pacote completo para as vistas (uma chamada por página).
 export async function getDados360(ano: number | null) {
-  const [params, emendas, totalAutores] = await Promise.all([
+  const [params, emendas, autoresCadastrados] = await Promise.all([
     getParametros360(ano),
     getEmendas360(ano),
     contarAutores(),
   ]);
+  const totalAutores =
+    params.numeroAutores != null && params.numeroAutores > 0
+      ? params.numeroAutores
+      : autoresCadastrados;
   return {
     params,
     emendas,
