@@ -48,6 +48,31 @@ describe("agruparDuplicados", () => {
     expect(grupos[0].canonicalId).toBe("b");
   });
 
+  it("agrupa infixo inserido no meio (mesmo 1º token, folga ≤2)", () => {
+    const grupos = agruparDuplicados([
+      { id: "a", nome: "Hospital Tabajara Ramos", emendas: 9 },
+      { id: "b", nome: "Hospital Municipal Tabajara Ramos", emendas: 4 },
+    ]);
+    expect(grupos).toHaveLength(1);
+    expect(grupos[0].canonicalId).toBe("a");
+  });
+
+  it("não agrupa quando o 1º token difere", () => {
+    const grupos = agruparDuplicados([
+      { id: "a", nome: "Fundo Saúde", emendas: 1 },
+      { id: "b", nome: "Secretaria Fundo Saúde", emendas: 1 },
+    ]);
+    expect(grupos).toHaveLength(0);
+  });
+
+  it("não agrupa quando a diferença passa de 2 tokens", () => {
+    const grupos = agruparDuplicados([
+      { id: "a", nome: "Centro Esportivo", emendas: 1 },
+      { id: "b", nome: "Centro Esportivo Municipal da Vila Nova Antena", emendas: 1 },
+    ]);
+    expect(grupos).toHaveLength(0);
+  });
+
   it("tokens normaliza acento e pontuação", () => {
     expect(tokens("Associação Ágape — Custeio")).toEqual([
       "associacao",

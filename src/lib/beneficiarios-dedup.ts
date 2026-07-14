@@ -23,11 +23,20 @@ export function tokens(nome: string): string[] {
     .filter(Boolean);
 }
 
-// A é word-prefix de B (todos os tokens de A abrem B), com A tendo ao menos 2
-// tokens — evita agrupar por termo genérico solto ("secretaria", "associacao").
-function ehPrefixo(a: string[], b: string[]): boolean {
+// A é "contido" em B quando: A tem ≥2 tokens, mesmo primeiro token, e todos os
+// tokens de A aparecem em B na mesma ordem (subsequência), com no máximo 2
+// tokens extras em B. Pega prefixos ("Santa Casa" ⊂ "Santa Casa de
+// Misericórdia") e infixos ("Hospital Tabajara Ramos" ⊂ "Hospital Municipal
+// Tabajara Ramos"), sem agrupar por termo genérico solto nem nomes distantes.
+function ehContido(a: string[], b: string[]): boolean {
   if (a.length < 2 || a.length >= b.length) return false;
-  return a.every((t, i) => t === b[i]);
+  if (b.length - a.length > 2) return false;
+  if (a[0] !== b[0]) return false;
+  let i = 0;
+  for (const t of b) {
+    if (i < a.length && t === a[i]) i++;
+  }
+  return i === a.length;
 }
 
 // Union-find simples.
@@ -56,7 +65,7 @@ export function agruparDuplicados(itens: BenefItem[]): GrupoDuplicado[] {
   const uf = new UF(itens.length);
   for (let i = 0; i < itens.length; i++) {
     for (let j = i + 1; j < itens.length; j++) {
-      if (ehPrefixo(toks[i], toks[j]) || ehPrefixo(toks[j], toks[i])) {
+      if (ehContido(toks[i], toks[j]) || ehContido(toks[j], toks[i])) {
         uf.union(i, j);
       }
     }
