@@ -17,6 +17,9 @@ const Payload = z.object({
   // Remove do exercício as emendas NÃO importadas (ids fora do prefixo mg*) —
   // limpa registros demo que colidem com a numeração real.
   limparDemo: z.boolean().optional(),
+  // Reprocessa objeto/justificativa das emendas já importadas (enriquecimento).
+  atualizarTextos: z.boolean().optional(),
+  instrumento: z.object({ numero: z.string(), ementa: z.string() }).optional(),
   parametros: z.record(z.string(), z.string()).optional(),
   autores: z.array(z.object({ curto: z.string().min(1), completo: z.string().min(1) })),
   emendas: z.array(
@@ -30,6 +33,7 @@ const Payload = z.object({
       lei: z.string().optional(),
       destaque: z.boolean().optional(),
       retirada: z.boolean().optional(),
+      justificativa: z.string().optional(),
     })
   ),
 });
@@ -112,7 +116,15 @@ export async function POST(req: Request) {
   if (!body.success) {
     return NextResponse.json({ error: body.error.message }, { status: 400 });
   }
-  const { exercicio: ano, limparDemo, parametros, autores, emendas } = body.data;
+  const {
+    exercicio: ano,
+    limparDemo,
+    atualizarTextos,
+    instrumento,
+    parametros,
+    autores,
+    emendas,
+  } = body.data;
   // Prefixo estável por ano (2026 → "mg26", compatível com o já importado).
   const pref = `mg${String(ano).slice(-2)}`;
 
@@ -148,12 +160,19 @@ export async function POST(req: Request) {
       id: `${pref}-pl-loa-${ano}`,
       tipo: "LOA",
       especie: "PROJETO_LEI",
-      numero: `PL LOA ${ano}`,
-      ementa: `Estima a receita e fixa a despesa do Município para o exercício de ${ano}.`,
+      numero: instrumento?.numero ?? `PL LOA ${ano}`,
+      ementa:
+        instrumento?.ementa ??
+        `Estima a receita e fixa a despesa do Município para o exercício de ${ano}.`,
       exercicioId: ex.id,
       status: "EM_TRAMITACAO",
     },
-    update: { status: "EM_TRAMITACAO" },
+    update: {
+      status: "EM_TRAMITACAO",
+      ...(instrumento
+        ? { numero: instrumento.numero, ementa: instrumento.ementa }
+        : {}),
+    },
   });
 
   // Autores: a mesma pessoa atravessa exercícios — resolve por nome antes de
@@ -322,6 +341,7 @@ export async function POST(req: Request) {
         tipo: "IMPOSITIVA" as const,
         objeto: e.descricao,
         justificativa:
+          e.justificativa ??
           `Item ${e.nOrig || e.seq} da cota de ${completoDe.get(e.autor) ?? e.autor} — importado da planilha consolidada (LOA ${ano}).${notas ? " " + notas : ""}`,
         valor: e.valor,
         // Retirada não tramita; com lei já foi acatada; o resto aguarda parecer.
@@ -333,6 +353,19 @@ export async function POST(req: Request) {
       };
     }),
   });
+
+  // Enriquecimento: reprocessa a justificativa das emendas já existentes.
+  let textosAtualizados = 0;
+  if (atualizarTextos) {
+    for (const e of emendas) {
+      if (!e.justificativa) continue;
+      const r = await prisma.emenda.updateMany({
+        where: { id: `${pref}-e-${e.seq}` },
+        data: { justificativa: e.justificativa },
+      });
+      textosAtualizados += r.count;
+    }
+  }
 
   await prisma.auditLog.create({
     data: {
@@ -357,5 +390,6 @@ export async function POST(req: Request) {
     dotacoes: destinos.size,
     emendasRecebidas: emendas.length,
     emendasCriadas: criadas.count,
+    textosAtualizados,
   });
 }

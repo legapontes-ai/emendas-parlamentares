@@ -1,7 +1,23 @@
 import { cn } from "@/lib/utils";
 
-// Marca Emendas360: três barras cyan→mint + wordmark. Usada na topbar escura,
-// no login e na visão pública.
+// Marca do Instituto i10 (mantenedor) — texto no padrão da identidade até o
+// arquivo oficial do logo ser fornecido (trocar aqui quando existir).
+export function LogoI10({ className }: { className?: string }) {
+  return (
+    <span className={cn("flex flex-col items-center leading-none", className)}>
+      <span className="rounded-lg bg-white/10 px-2 py-1 text-[15px] font-black tracking-tight">
+        <span className="text-white">i</span>
+        <span className="text-brand-mint">10</span>
+      </span>
+      <span className="mt-0.5 text-[7px] font-semibold uppercase tracking-[1.5px] text-[#9fb4d8]">
+        Instituto
+      </span>
+    </span>
+  );
+}
+
+// Marca Emendas360: três barras cyan→mint + wordmark, precedida pela marca do
+// Instituto i10. Usada na topbar escura, no login e na visão pública.
 export function LogoEmendas360({
   tamanho = 34,
   className,
@@ -11,6 +27,8 @@ export function LogoEmendas360({
 }) {
   return (
     <span className={cn("flex items-center gap-2.5", className)}>
+      <LogoI10 />
+      <span className="h-8 w-px bg-white/20" aria-hidden />
       <svg
         viewBox="0 0 48 48"
         style={{ width: tamanho, height: tamanho }}
