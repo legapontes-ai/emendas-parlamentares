@@ -17,6 +17,7 @@ import {
   derivarBeneficiarios,
   excluirBeneficiario,
 } from "@/lib/actions/beneficiarios";
+import { MesclarDuplicados } from "./mesclar-duplicados";
 import { ROTULO_TIPO_BENEFICIARIO, opcoes } from "@/lib/rotulos";
 
 type Beneficiario = {
@@ -28,9 +29,21 @@ type Beneficiario = {
   _count: { emendas: number };
 };
 
+type Grupo = {
+  canonicalId: string;
+  canonicalNome: string;
+  membros: { id: string; nome: string; emendas: number }[];
+};
+
 // Cadastro do beneficiário final das emendas — a "ponta" da rastreabilidade
 // exigida pelo STF/TCE (docs/analise-regulatoria-gaps.md, P0).
-export function BeneficiariosTab({ beneficiarios }: { beneficiarios: Beneficiario[] }) {
+export function BeneficiariosTab({
+  beneficiarios,
+  duplicados = [],
+}: {
+  beneficiarios: Beneficiario[];
+  duplicados?: Grupo[];
+}) {
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-start justify-between gap-4">
@@ -69,6 +82,8 @@ export function BeneficiariosTab({ beneficiarios }: { beneficiarios: Beneficiari
           </FormDialog>
         </div>
       </div>
+
+      <MesclarDuplicados grupos={duplicados} />
 
       {beneficiarios.length === 0 ? (
         <EmptyState

@@ -56,6 +56,55 @@ export async function criarBeneficiario(input: unknown): Promise<ActionResult> {
   }
 }
 
+// Mescla `duplicadosIds` no beneficiário `canonicalId`: reaponta as emendas e
+// remove as variantes. Idempotente e transacional por lote.
+export async function mesclarBeneficiarios(
+  canonicalId: string,
+  duplicadosIds: string[]
+): Promise<ActionResult> {
+  const gate = await exigirGestao();
+  if (gate.erro) return { ok: false, error: gate.erro };
+
+  const ids = duplicadosIds.filter((id) => id && id !== canonicalId);
+  if (ids.length === 0) return { ok: false, error: "Nada para mesclar." };
+
+  try {
+    const canonical = await prisma.beneficiario.findUnique({
+      where: { id: canonicalId },
+      select: { id: true, nome: true },
+    });
+    if (!canonical) return { ok: false, error: "Beneficiário de destino não encontrado." };
+
+    const [reapontadas] = await prisma.$transaction([
+      prisma.emenda.updateMany({
+        where: { beneficiarioId: { in: ids } },
+        data: { beneficiarioId: canonicalId },
+      }),
+      prisma.beneficiario.deleteMany({ where: { id: { in: ids } } }),
+    ]);
+
+    await registrarAuditoria({
+      usuarioId: audUser(gate.user.id),
+      entidade: "Beneficiario",
+      entidadeId: canonicalId,
+      acao: "MESCLAR",
+      dadosDepois: {
+        canonical: canonical.nome,
+        removidos: ids.length,
+        emendasReapontadas: reapontadas.count,
+      },
+    });
+    revalidatePath("/config");
+    revalidatePath("/emendas");
+    return {
+      ok: true,
+      message: `${ids.length} variante(s) mesclada(s) em "${canonical.nome}"; ${reapontadas.count} emenda(s) reapontada(s).`,
+    };
+  } catch {
+    return { ok: false, error: "Falha ao mesclar beneficiários." };
+  }
+}
+
 export async function excluirBeneficiario(id: string): Promise<ActionResult> {
   const gate = await exigirGestao();
   if (gate.erro) return { ok: false, error: gate.erro };

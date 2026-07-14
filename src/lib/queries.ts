@@ -104,6 +104,22 @@ export async function listarBeneficiarios() {
   );
 }
 
+// Grupos de beneficiários possivelmente duplicados (variantes de grafia).
+export async function sugerirDuplicadosBeneficiarios() {
+  const itens = await safe(
+    () =>
+      prisma.beneficiario.findMany({
+        select: { id: true, nome: true, _count: { select: { emendas: true } } },
+        orderBy: { nome: "asc" },
+      }),
+    [] as { id: string; nome: string; _count: { emendas: number } }[]
+  );
+  const { agruparDuplicados } = await import("./beneficiarios-dedup");
+  return agruparDuplicados(
+    itens.map((b) => ({ id: b.id, nome: b.nome, emendas: b._count.emendas }))
+  );
+}
+
 export async function listarBeneficiariosOpcoes() {
   return safe(
     () =>

@@ -15,6 +15,7 @@ import {
   listarParametros,
   listarProjetosDeLei,
   listarUsuarios,
+  sugerirDuplicadosBeneficiarios,
 } from "@/lib/queries";
 import { ParametrosTab } from "@/components/config/parametros-tab";
 import { NormasTab } from "@/components/config/normas-tab";
@@ -34,6 +35,7 @@ export default async function ConfigPage() {
     exercicios,
     auditoria,
     beneficiarios,
+    duplicados,
   ] = await Promise.all([
     listarParametros(),
     listarNormas(),
@@ -44,6 +46,7 @@ export default async function ConfigPage() {
     listarExercicios(),
     listarAuditoria(),
     listarBeneficiarios(),
+    sugerirDuplicadosBeneficiarios(),
   ]);
 
   const exOpc = exercicios.map((e) => ({ id: e.id, ano: e.ano }));
@@ -82,7 +85,7 @@ export default async function ConfigPage() {
           />
         </TabsContent>
         <TabsContent value="beneficiarios" className="mt-4">
-          <BeneficiariosTab beneficiarios={beneficiarios} />
+          <BeneficiariosTab beneficiarios={beneficiarios} duplicados={duplicados} />
         </TabsContent>
         <TabsContent value="normas" className="mt-4">
           <NormasTab normas={normas} />
