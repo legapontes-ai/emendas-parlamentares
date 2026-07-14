@@ -14,6 +14,9 @@ export const maxDuration = 60;
 
 const Payload = z.object({
   exercicio: z.number().int().min(2020).max(2100),
+  // Remove do exercício as emendas NÃO importadas (ids fora do prefixo mg*) —
+  // limpa registros demo que colidem com a numeração real.
+  limparDemo: z.boolean().optional(),
   parametros: z.record(z.string(), z.string()).optional(),
   autores: z.array(z.object({ curto: z.string().min(1), completo: z.string().min(1) })),
   emendas: z.array(
@@ -109,9 +112,15 @@ export async function POST(req: Request) {
   if (!body.success) {
     return NextResponse.json({ error: body.error.message }, { status: 400 });
   }
-  const { exercicio: ano, parametros, autores, emendas } = body.data;
+  const { exercicio: ano, limparDemo, parametros, autores, emendas } = body.data;
   // Prefixo estável por ano (2026 → "mg26", compatível com o já importado).
   const pref = `mg${String(ano).slice(-2)}`;
+
+  if (limparDemo) {
+    await prisma.emenda.deleteMany({
+      where: { exercicio: { ano }, NOT: { id: { startsWith: "mg" } } },
+    });
+  }
 
   // Exercício + parâmetros do exercício.
   const ex = await prisma.exercicio.upsert({
