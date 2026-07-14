@@ -24,6 +24,9 @@ const Payload = z.object({
       nOrig: z.string(),
       descricao: z.string().min(1),
       valor: z.number().min(0),
+      lei: z.string().optional(),
+      destaque: z.boolean().optional(),
+      retirada: z.boolean().optional(),
     })
   ),
 });
@@ -107,6 +110,8 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: body.error.message }, { status: 400 });
   }
   const { exercicio: ano, parametros, autores, emendas } = body.data;
+  // Prefixo estável por ano (2026 → "mg26", compatível com o já importado).
+  const pref = `mg${String(ano).slice(-2)}`;
 
   // Exercício + parâmetros do exercício.
   const ex = await prisma.exercicio.upsert({
@@ -129,9 +134,9 @@ export async function POST(req: Request) {
 
   // Instrumento base (PL da LOA).
   const pl = await prisma.instrumentoPlanejamento.upsert({
-    where: { id: `mg26-pl-loa-${ano}` },
+    where: { id: `${pref}-pl-loa-${ano}` },
     create: {
-      id: `mg26-pl-loa-${ano}`,
+      id: `${pref}-pl-loa-${ano}`,
       tipo: "LOA",
       especie: "PROJETO_LEI",
       numero: `PL LOA ${ano}`,
@@ -142,10 +147,20 @@ export async function POST(req: Request) {
     update: { status: "EM_TRAMITACAO" },
   });
 
-  // Autores.
+  // Autores: a mesma pessoa atravessa exercícios — resolve por nome antes de
+  // criar (Adriano de 2026 é o mesmo Autor nas alterações de 2025).
   const autorId = new Map<string, string>();
   for (const a of autores) {
-    const id = `mg26-a-${slug(a.curto)}`;
+    const existente = await prisma.autor.findFirst({ where: { nome: a.curto } });
+    if (existente) {
+      await prisma.autor.update({
+        where: { id: existente.id },
+        data: { cargo: a.completo },
+      });
+      autorId.set(a.curto, existente.id);
+      continue;
+    }
+    const id = `mg-a-${slug(a.curto)}`;
     await prisma.autor.upsert({
       where: { id },
       create: { id, nome: a.curto, cargo: a.completo },
@@ -251,9 +266,9 @@ export async function POST(req: Request) {
       update: {},
     });
     const dot = await prisma.dotacao.upsert({
-      where: { id: `mg26-dot-${chave}` },
+      where: { id: `${pref}-dot-${chave}` },
       create: {
-        id: `mg26-dot-${chave}`,
+        id: `${pref}-dot-${chave}`,
         instrumentoId: pl.id,
         exercicioId: ex.id,
         orgaoId: orgao.id,
@@ -279,22 +294,35 @@ export async function POST(req: Request) {
   const completoDe = new Map(autores.map((a) => [a.curto, a.completo]));
   const criadas = await prisma.emenda.createMany({
     skipDuplicates: true,
-    data: emendas.map((e) => ({
-      id: `mg26-e-${e.seq}`,
-      numero: String(e.seq),
-      exercicioId: ex.id,
-      instrumentoBaseId: pl.id,
-      autorId: autorId.get(e.autor)!,
-      dotacaoId: dotacaoDoDestino.get(destinoDaEmenda.get(e.seq)!)!,
-      tipo: "IMPOSITIVA" as const,
-      objeto: e.descricao,
-      justificativa: `Item ${e.nOrig || e.seq} da cota de ${completoDe.get(e.autor) ?? e.autor} — importado da planilha consolidada (LOA ${ano}).`,
-      valor: e.valor,
-      // Retiradas pelo autor não seguem tramitação.
-      status: /retirad[oa] pelo autor/i.test(e.descricao)
-        ? ("RASCUNHO" as const)
-        : ("SUBMETIDA" as const),
-    })),
+    data: emendas.map((e) => {
+      const retirada = e.retirada || /retirad[oa] pelo autor/i.test(e.descricao);
+      const notas = [
+        e.lei ? `Acatada pela ${e.lei}.` : null,
+        e.destaque ? "Com destaque." : null,
+        retirada ? "Retirada pelo autor." : null,
+      ]
+        .filter(Boolean)
+        .join(" ");
+      return {
+        id: `${pref}-e-${e.seq}`,
+        numero: String(e.seq),
+        exercicioId: ex.id,
+        instrumentoBaseId: pl.id,
+        autorId: autorId.get(e.autor)!,
+        dotacaoId: dotacaoDoDestino.get(destinoDaEmenda.get(e.seq)!)!,
+        tipo: "IMPOSITIVA" as const,
+        objeto: e.descricao,
+        justificativa:
+          `Item ${e.nOrig || e.seq} da cota de ${completoDe.get(e.autor) ?? e.autor} — importado da planilha consolidada (LOA ${ano}).${notas ? " " + notas : ""}`,
+        valor: e.valor,
+        // Retirada não tramita; com lei já foi acatada; o resto aguarda parecer.
+        status: retirada
+          ? ("RASCUNHO" as const)
+          : e.lei
+            ? ("APROVADA" as const)
+            : ("SUBMETIDA" as const),
+      };
+    }),
   });
 
   await prisma.auditLog.create({
