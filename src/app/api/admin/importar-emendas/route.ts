@@ -355,15 +355,22 @@ export async function POST(req: Request) {
   });
 
   // Enriquecimento: reprocessa a justificativa das emendas já existentes.
+  // Em lotes paralelos — a latência função↔banco torna o sequencial inviável
+  // dentro do maxDuration.
   let textosAtualizados = 0;
   if (atualizarTextos) {
-    for (const e of emendas) {
-      if (!e.justificativa) continue;
-      const r = await prisma.emenda.updateMany({
-        where: { id: `${pref}-e-${e.seq}` },
-        data: { justificativa: e.justificativa },
-      });
-      textosAtualizados += r.count;
+    const comTexto = emendas.filter((e) => e.justificativa);
+    const LOTE = 15;
+    for (let i = 0; i < comTexto.length; i += LOTE) {
+      const resultados = await Promise.all(
+        comTexto.slice(i, i + LOTE).map((e) =>
+          prisma.emenda.updateMany({
+            where: { id: `${pref}-e-${e.seq}` },
+            data: { justificativa: e.justificativa! },
+          })
+        )
+      );
+      for (const r of resultados) textosAtualizados += r.count;
     }
   }
 
