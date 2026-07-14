@@ -67,6 +67,12 @@ export const VISTAS360: Vista360[] = [
     roles: TODOS,
   },
   {
+    id: "conformidade",
+    titulo: "Conformidade",
+    href: "/conformidade",
+    roles: [Role.LEG_ADMIN, Role.LEG_TECNICO, Role.EXEC_ADMIN, Role.SUPER_ADMIN],
+  },
+  {
     id: "ferramentas",
     titulo: "Ferramentas",
     href: "/hub",

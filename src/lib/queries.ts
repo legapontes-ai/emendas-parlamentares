@@ -92,6 +92,29 @@ export async function listarAuditoria(filtros: { entidade?: string } = {}) {
   );
 }
 
+// -------------------------------------------------------------- Beneficiários
+export async function listarBeneficiarios() {
+  return safe(
+    () =>
+      prisma.beneficiario.findMany({
+        include: { _count: { select: { emendas: true } } },
+        orderBy: { nome: "asc" },
+      }),
+    []
+  );
+}
+
+export async function listarBeneficiariosOpcoes() {
+  return safe(
+    () =>
+      prisma.beneficiario.findMany({
+        select: { id: true, nome: true, tipo: true },
+        orderBy: { nome: "asc" },
+      }),
+    [] as { id: string; nome: string; tipo: string }[]
+  );
+}
+
 // ------------------------------------------------------------------- Usuários
 export async function listarUsuarios() {
   return safe(

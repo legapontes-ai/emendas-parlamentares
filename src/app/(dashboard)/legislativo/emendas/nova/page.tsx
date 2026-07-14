@@ -4,6 +4,7 @@ import { getCurrentUser } from "@/lib/session";
 import { podeCriarEmenda } from "@/lib/authz";
 import { getAnoAtivo } from "@/lib/exercicio";
 import { getInstrumentoBaseAberto } from "@/lib/queries-orcamento";
+import { listarBeneficiariosOpcoes } from "@/lib/queries";
 import { NovaEmendaForm } from "@/components/emendas/nova-emenda-form";
 
 const crumbs = [
@@ -28,7 +29,10 @@ export default async function NovaEmendaPage() {
   }
 
   const ano = await getAnoAtivo();
-  const base = await getInstrumentoBaseAberto(ano);
+  const [base, beneficiarios] = await Promise.all([
+    getInstrumentoBaseAberto(ano),
+    listarBeneficiariosOpcoes(),
+  ]);
 
   return (
     <div>
@@ -40,6 +44,7 @@ export default async function NovaEmendaPage() {
       {base ? (
         <NovaEmendaForm
           base={{ id: base.id, numero: base.numero, tipo: base.tipo, ano: base.exercicio.ano }}
+          beneficiarios={beneficiarios.map((b) => ({ id: b.id, nome: b.nome }))}
         />
       ) : (
         <EmptyState

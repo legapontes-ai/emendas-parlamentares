@@ -6,6 +6,7 @@ import {
   Poder,
   Role,
   StatusInstrumento,
+  TipoBeneficiario,
   TipoEmenda,
   TipoInstrumento,
   TipoNorma,
@@ -138,6 +139,8 @@ export const emendaRascunhoSchema = z
     objeto: z.string().trim().min(1, "Descreva o objeto."),
     justificativa: z.string().trim().min(1, "Informe a justificativa."),
     valor: valorMonetario,
+    // Beneficiário final (rastreabilidade ponta a ponta — STF/TCE).
+    beneficiarioId: textoOpcional,
     dotacaoOrigemId: textoOpcional,
     dotacaoDestinoId: textoOpcional,
   })
@@ -153,3 +156,13 @@ export type EmendaRascunhoInput = z.input<typeof emendaRascunhoSchema>;
 export const parecerSchema = z.object({
   parecer: z.string().trim().min(1, "Informe o parecer."),
 });
+
+// ------------------------------------------------------------- Beneficiários
+export const beneficiarioSchema = z.object({
+  nome: z.string().trim().min(2, "Informe o nome do beneficiário."),
+  tipo: z.enum(valores(TipoBeneficiario)),
+  cnpj: textoOpcional,
+  observacao: textoOpcional,
+});
+
+export type BeneficiarioInput = z.input<typeof beneficiarioSchema>;

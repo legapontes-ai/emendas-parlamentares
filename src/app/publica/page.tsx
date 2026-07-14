@@ -40,6 +40,21 @@ export default async function PublicaPage() {
           nota="orçamento impositivo municipal"
         />
 
+        <div className="mb-4 flex flex-wrap gap-2">
+          <Link
+            href="/publica/emendas"
+            className="grad-main rounded-lg px-4 py-2 text-[13px] font-bold text-white hover:brightness-110"
+          >
+            🔎 Consultar todas as emendas
+          </Link>
+          <Link
+            href="/publica/manual"
+            className="rounded-lg border border-border bg-card px-4 py-2 text-[13px] font-bold text-primary hover:border-brand-cyan"
+          >
+            📖 Como funcionam as emendas (manual)
+          </Link>
+        </div>
+
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           <KpiCard
             eyebrow="Quanto os vereadores destinam"

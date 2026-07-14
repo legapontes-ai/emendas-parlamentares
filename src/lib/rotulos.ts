@@ -68,6 +68,12 @@ export const ROTULO_ROLE: Record<string, string> = {
   [Role.LEG_CONSULTA]: "Legislativo · Consulta",
 };
 
+export const ROTULO_TIPO_BENEFICIARIO: Record<string, string> = {
+  ORGAO_PUBLICO: "Órgão público",
+  ENTIDADE_TERCEIRO_SETOR: "Entidade (3º setor)",
+  OUTRO: "Outro",
+};
+
 export const ROTULO_TIPO_EMENDA: Record<string, string> = {
   [TipoEmenda.ACRESCIMO]: "Acréscimo",
   [TipoEmenda.ANULACAO]: "Anulação",

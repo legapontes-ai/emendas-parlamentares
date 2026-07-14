@@ -8,6 +8,7 @@ import {
 import { listarExercicios } from "@/lib/exercicio";
 import {
   listarAuditoria,
+  listarBeneficiarios,
   listarInstrumentos,
   listarNormas,
   listarNormasAtivas,
@@ -20,6 +21,7 @@ import { NormasTab } from "@/components/config/normas-tab";
 import { InstrumentosTab } from "@/components/config/instrumentos-tab";
 import { UsuariosTab } from "@/components/config/usuarios-tab";
 import { AuditoriaTab } from "@/components/config/auditoria-tab";
+import { BeneficiariosTab } from "@/components/config/beneficiarios-tab";
 
 export default async function ConfigPage() {
   const [
@@ -31,6 +33,7 @@ export default async function ConfigPage() {
     usuarios,
     exercicios,
     auditoria,
+    beneficiarios,
   ] = await Promise.all([
     listarParametros(),
     listarNormas(),
@@ -40,6 +43,7 @@ export default async function ConfigPage() {
     listarUsuarios(),
     listarExercicios(),
     listarAuditoria(),
+    listarBeneficiarios(),
   ]);
 
   const exOpc = exercicios.map((e) => ({ id: e.id, ano: e.ano }));
@@ -63,6 +67,7 @@ export default async function ConfigPage() {
       <Tabs defaultValue="parametros">
         <TabsList>
           <TabsTrigger value="parametros">Parâmetros</TabsTrigger>
+          <TabsTrigger value="beneficiarios">Beneficiários</TabsTrigger>
           <TabsTrigger value="normas">Normas</TabsTrigger>
           <TabsTrigger value="instrumentos">Instrumentos</TabsTrigger>
           <TabsTrigger value="usuarios">Usuários</TabsTrigger>
@@ -75,6 +80,9 @@ export default async function ConfigPage() {
             exercicios={exOpc}
             normasAtivas={normasAtivas}
           />
+        </TabsContent>
+        <TabsContent value="beneficiarios" className="mt-4">
+          <BeneficiariosTab beneficiarios={beneficiarios} />
         </TabsContent>
         <TabsContent value="normas" className="mt-4">
           <NormasTab normas={normas} />

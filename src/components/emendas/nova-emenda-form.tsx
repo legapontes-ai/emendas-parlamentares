@@ -68,7 +68,13 @@ function Selecao({
   );
 }
 
-export function NovaEmendaForm({ base }: { base: Base }) {
+export function NovaEmendaForm({
+  base,
+  beneficiarios = [],
+}: {
+  base: Base;
+  beneficiarios?: { id: string; nome: string }[];
+}) {
   const router = useRouter();
   const [pending, start] = useTransition();
 
@@ -90,6 +96,8 @@ export function NovaEmendaForm({ base }: { base: Base }) {
   const [objeto, setObjeto] = useState("");
   const [justificativa, setJustificativa] = useState("");
   const [valor, setValor] = useState("");
+  // Beneficiário final (rastreabilidade — STF/TCE). Cadastro em /config.
+  const [beneficiarioId, setBeneficiarioId] = useState("");
 
   // Remanejamento
   const [todasDotacoes, setTodasDotacoes] = useState<DotacaoOpcao[]>([]);
@@ -159,6 +167,7 @@ export function NovaEmendaForm({ base }: { base: Base }) {
       objeto,
       justificativa,
       valor,
+      beneficiarioId,
       dotacaoOrigemId: tipo === "REMANEJAMENTO" ? origemId : "",
       dotacaoDestinoId: tipo === "REMANEJAMENTO" ? destinoId : "",
     };
@@ -300,6 +309,20 @@ export function NovaEmendaForm({ base }: { base: Base }) {
             <div className="space-y-1.5">
               <Label htmlFor="objeto">Objeto</Label>
               <textarea id="objeto" className={`${controle} min-h-20 py-2`} value={objeto} onChange={(e) => { setObjeto(e.target.value); sujar(); }} placeholder="Descrição narrativa do objeto da emenda" />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="beneficiario">Beneficiário final</Label>
+              <select
+                id="beneficiario"
+                className={controle}
+                value={beneficiarioId}
+                onChange={(e) => { setBeneficiarioId(e.target.value); sujar(); }}
+              >
+                <option value="">— (cadastre em Configurações → Beneficiários)</option>
+                {beneficiarios.map((b) => (
+                  <option key={b.id} value={b.id}>{b.nome}</option>
+                ))}
+              </select>
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="justificativa">Justificativa</Label>

@@ -39,6 +39,7 @@ export type Emenda360 = {
   funcaoNome: string;
   orgaoNome: string;
   unidadeNome: string;
+  beneficiarioNome: string | null;
 };
 
 export type AutorResumo = {
@@ -117,6 +118,7 @@ export async function getEmendas360(ano: number | null): Promise<Emenda360[]> {
           tipo: true,
           objeto: true,
           autor: { select: { id: true, nome: true } },
+          beneficiario: { select: { nome: true } },
           dotacao: {
             select: {
               funcao: { select: { codigo: true, nome: true } },
@@ -142,6 +144,7 @@ export async function getEmendas360(ano: number | null): Promise<Emenda360[]> {
     funcaoNome: e.dotacao.funcao.nome,
     orgaoNome: e.dotacao.orgao.nome,
     unidadeNome: e.dotacao.unidadeOrcamentaria.nome,
+    beneficiarioNome: e.beneficiario?.nome ?? null,
   }));
 }
 
@@ -196,14 +199,21 @@ export function resumoPorAutor(
   return [...mapa.values()].sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"));
 }
 
+// Destino: o beneficiário final quando vinculado (rastreabilidade P0);
+// senão, o órgão/unidade da dotação como aproximação.
 export function resumoPorDestino(
   emendas: Emenda360[],
   p: Parametros360,
-  nivel: "orgao" | "unidade" = "orgao"
+  nivel: "beneficiario" | "orgao" | "unidade" = "beneficiario"
 ): DestinoResumo[] {
   const mapa = new Map<string, DestinoResumo>();
   for (const e of emendas) {
-    const nome = nivel === "orgao" ? e.orgaoNome : e.unidadeNome;
+    const nome =
+      nivel === "beneficiario"
+        ? (e.beneficiarioNome ?? e.orgaoNome)
+        : nivel === "orgao"
+          ? e.orgaoNome
+          : e.unidadeNome;
     const r = mapa.get(nome) ?? { nome, itens: 0, valor: 0, valorSaude: 0 };
     r.itens += 1;
     r.valor += e.valor;

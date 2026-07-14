@@ -98,6 +98,14 @@ enum ModoValidacao {
   ALERTA
 }
 
+// Natureza do beneficiário final da emenda (rastreabilidade ponta a ponta —
+// exigência STF/TCE; ver docs/analise-regulatoria-gaps.md).
+enum TipoBeneficiario {
+  ORGAO_PUBLICO
+  ENTIDADE_TERCEIRO_SETOR
+  OUTRO
+}
+
 // Tipo de emenda parlamentar.
 enum TipoEmenda {
   ACRESCIMO
@@ -446,6 +454,23 @@ model ParametroValidacao {
 // EMENDAS PARLAMENTARES
 // ============================================================================
 
+// Beneficiário final da emenda (órgão público ou entidade). Entidade global —
+// a mesma instituição atravessa exercícios. CNPJ opcional (órgãos públicos).
+model Beneficiario {
+  id         String           @id @default(cuid())
+  nome       String
+  tipo       TipoBeneficiario @default(OUTRO)
+  cnpj       String?
+  observacao String?
+  createdAt  DateTime         @default(now())
+  updatedAt  DateTime         @updatedAt
+
+  emendas Emenda[]
+
+  @@unique([nome])
+  @@index([tipo])
+}
+
 // Autor da emenda (vereador). Vínculo opcional a um usuário do sistema (1:1).
 model Autor {
   id        String   @id @default(cuid())
@@ -475,6 +500,8 @@ model Emenda {
   justificativa     String
   valor             Decimal      @db.Decimal(18, 2)
   status            StatusEmenda @default(RASCUNHO)
+  // Beneficiário final (rastreabilidade ponta a ponta — STF/TCE).
+  beneficiarioId    String?
   // Para REMANEJAMENTO: origem e destino.
   dotacaoOrigemId   String?
   dotacaoDestinoId  String?
@@ -484,6 +511,7 @@ model Emenda {
   exercicio       Exercicio               @relation(fields: [exercicioId], references: [id], onDelete: Cascade)
   instrumentoBase InstrumentoPlanejamento @relation(fields: [instrumentoBaseId], references: [id])
   autor           Autor                   @relation(fields: [autorId], references: [id])
+  beneficiario    Beneficiario?           @relation(fields: [beneficiarioId], references: [id], onDelete: SetNull)
   dotacao         Dotacao                 @relation("EmendaDotacao", fields: [dotacaoId], references: [id])
   dotacaoOrigem   Dotacao?                @relation("EmendaDotacaoOrigem", fields: [dotacaoOrigemId], references: [id])
   dotacaoDestino  Dotacao?                @relation("EmendaDotacaoDestino", fields: [dotacaoDestinoId], references: [id])
@@ -497,6 +525,7 @@ model Emenda {
   @@index([autorId])
   @@index([dotacaoId])
   @@index([status])
+  @@index([beneficiarioId])
 }
 
 // Registro de uma execução do motor de validação sobre uma emenda.
