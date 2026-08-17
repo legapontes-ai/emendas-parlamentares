@@ -100,6 +100,13 @@ fonte_nome, valor_inicial
 `programa_codigo, acao_codigo (opcional), descricao`. Formate as colunas de
 código como **Texto** para preservar zeros à esquerda.
 
+## Observatório de outros municípios
+
+Camada somente-leitura com emendas impositivas de outros municípios paulistas,
+coletadas de fontes públicas (Santos, Campinas, Mogi Guaçu e Paulínia no
+piloto). Página em `/publica/observatorio`; coleta com
+`npm run coletar:observatorio`. Ver `docs/observatorio-municipios.md`.
+
 ## Variáveis de ambiente
 
 | Variável | Uso |
