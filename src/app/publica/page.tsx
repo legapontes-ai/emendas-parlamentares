@@ -53,6 +53,12 @@ export default async function PublicaPage() {
           >
             📖 Como funcionam as emendas (manual)
           </Link>
+          <Link
+            href="/publica/observatorio"
+            className="rounded-lg border border-border bg-card px-4 py-2 text-[13px] font-bold text-primary hover:border-brand-cyan"
+          >
+            🌎 Observatório de outros municípios
+          </Link>
         </div>
 
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">

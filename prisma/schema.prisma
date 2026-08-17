@@ -543,6 +543,46 @@ model ValidacaoEmenda {
 }
 
 // ============================================================================
+// OBSERVATÓRIO — emendas impositivas de OUTROS municípios, coletadas de fontes
+// públicas (sistemas legislativos e dados abertos). Camada somente-leitura,
+// paralela ao fluxo operacional: não referencia Exercicio/Dotacao porque a
+// classificação orçamentária de origem não é publicada pelas fontes.
+// Alimentada por scripts/coletar-observatorio.ts (upsert por fonte+fonteId).
+// ============================================================================
+
+model EmendaObservatorio {
+  id               String    @id @default(cuid())
+  codIbge          String
+  municipio        String
+  // Conector de origem (ex.: SAGL-MOGIGUACU, SAPL-CAMPINAS, SANTOS-DADOSABERTOS,
+  // SISCAM-PAULINIA) — junto com fonteId identifica o registro na fonte.
+  fonte            String
+  fonteId          String
+  numero           Int?
+  ano              Int?
+  dataApresentacao DateTime?
+  autor            String?
+  partido          String?
+  ementa           String?
+  valor            Decimal?  @db.Decimal(18, 2)
+  beneficiario     String?
+  orgao            String?
+  saldo            Decimal?  @db.Decimal(18, 2)
+  pago             Decimal?  @db.Decimal(18, 2)
+  situacao         String?
+  urlDetalhe       String?
+  urlPdf           String?
+  raw              Json?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  @@unique([fonte, fonteId])
+  @@index([codIbge])
+  @@index([ano])
+  @@index([autor])
+}
+
+// ============================================================================
 // ACESSO E AUDITORIA — Auth.js (modelos técnicos em inglês) + AuditLog
 // ============================================================================
 

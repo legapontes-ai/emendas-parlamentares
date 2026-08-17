@@ -11,6 +11,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "seed": "tsx prisma/seed.ts",
+    "coletar:observatorio": "tsx scripts/coletar-observatorio.ts",
     "postinstall": "prisma generate"
   },
   "dependencies": {
